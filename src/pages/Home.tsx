@@ -25,7 +25,9 @@ export default function Home() {
 
         <SkillCard title="Speaking" path="/speaking" />
 
-        <SkillCard title="Grammar" path="/grammar" />
+        {/* <SkillCard title="Grammar" path="/grammar" /> */}
+
+        <SkillCard title="Writing" path="/writings" />
       </div>
     </div>
   );

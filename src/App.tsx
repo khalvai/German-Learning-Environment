@@ -5,6 +5,8 @@ import Home from "./pages/Home";
 import Reading from "./pages/Reading";
 import Listening from "./pages/Listening";
 import ReadingDetail from "./pages/ReadingDetail";
+import WritingEditor from "./pages/WritingEditor";
+import Writings from "./pages/Writings";
 
 function App() {
   return (
@@ -15,6 +17,9 @@ function App() {
         <Route path="/reading" element={<Reading />} />
         <Route path="/readings/:id" element={<ReadingDetail />} />
         <Route path="/listening" element={<Listening />} />
+
+        <Route path="/writings" element={<Writings />} />
+        <Route path="/writing/editor" element={<WritingEditor />} />
       </Routes>
     </HashRouter>
   );

@@ -73,7 +73,7 @@ export default function ReadingDetail() {
         </div>
 
         {/* TOP CONTAINER: Holds all configuration menus */}
-        <div className="h-full w-[40%] l  pt-8 flex flex-col gap-5 border-l-2 border-[#1e1e24]">
+        <div className="h-full w-[40%] l  pt-8 flex flex-col gap-5 border-l-2  border-[#32323d]">
           {/* CONDITIONAL RENDER: Shows loader or the final AI output component */}
 
           {selectedWord && (

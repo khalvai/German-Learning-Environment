@@ -560,9 +560,9 @@ export default function GermanWordLookup({
 
             {explanation.partOfSpeech === "Verb" && (
               <div className="flex gap-2">
-                <p> {explanation.grammar?.verb?.infinitive}</p>
-                <p> {explanation.grammar?.verb?.presentThirdPerson}</p>
-                <p> {explanation.grammar?.verb?.präteritumThirdPerson}</p>
+                <p> {explanation.grammar?.verb?.infinitive},</p>
+                <p> {explanation.grammar?.verb?.presentThirdPerson},</p>
+                <p> {explanation.grammar?.verb?.präteritumThirdPerson},</p>
                 <p>
                   {explanation.grammar?.verb?.perfectAuxiliary === "haben"
                     ? "hat"
