@@ -181,3 +181,205 @@ export async function explainWord(
 
   return result;
 }
+
+export interface WritingAnalysisResponse {
+  overallFeedback: string;
+
+  strengths: string[];
+
+  grammarMistakes: {
+    original: string;
+    correction: string;
+    explanation: string;
+  }[];
+
+  vocabularyFeedback: {
+    original: string;
+    suggestion: string;
+    explanation: string;
+  }[];
+
+  sentenceStructureFeedback: {
+    original: string;
+    suggestion: string;
+    explanation: string;
+  }[];
+
+  improvedText: string;
+
+  score: {
+    grammar: number;
+    vocabulary: number;
+    sentenceStructure: number;
+    overall: number;
+  };
+}
+export async function analyzeWriting(
+  writing: string,
+): Promise<WritingAnalysisResponse> {
+  if (!writing.trim()) {
+    throw new Error("The writing parameter cannot be empty.");
+  }
+
+  const prompt = `
+Analyze the following German writing from an A2 German learner.
+
+Writing:
+"""
+${writing}
+"""
+
+Your job is to act as a German teacher. Analyze the learner's writing carefully.
+
+Important:
+- Do not rewrite the entire text without explaining the mistakes.
+- Identify actual mistakes separately from stylistic suggestions.
+- Be encouraging, but honest and critical.
+- Do not mark something as a mistake merely because another phrasing sounds more natural.
+- Distinguish between grammar errors and optional improvements.
+- Keep explanations understandable for an A2 learner.
+`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-flash-latest",
+    contents: prompt,
+    config: {
+      systemInstruction:
+        "You are an experienced German teacher helping an A2-level student improve their writing.",
+
+      responseMimeType: "application/json",
+
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          overallFeedback: {
+            type: Type.STRING,
+            description:
+              "A concise overall assessment of the writing. Mention the most important areas to improve.",
+          },
+
+          strengths: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.STRING,
+            },
+            description:
+              "Things the learner did well. Be specific and refer to the actual writing.",
+          },
+
+          grammarMistakes: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                original: {
+                  type: Type.STRING,
+                  description:
+                    "The exact incorrect text from the learner's writing.",
+                },
+                correction: {
+                  type: Type.STRING,
+                  description: "The corrected German version.",
+                },
+                explanation: {
+                  type: Type.STRING,
+                  description:
+                    "A simple explanation of why the original is incorrect.",
+                },
+              },
+              required: ["original", "correction", "explanation"],
+            },
+            description: "Actual grammar mistakes found in the writing.",
+          },
+
+          vocabularyFeedback: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                original: {
+                  type: Type.STRING,
+                },
+                suggestion: {
+                  type: Type.STRING,
+                },
+                explanation: {
+                  type: Type.STRING,
+                },
+              },
+              required: ["original", "suggestion", "explanation"],
+            },
+            description:
+              "Vocabulary or word-choice suggestions. These are improvements, not necessarily mistakes.",
+          },
+
+          sentenceStructureFeedback: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                original: {
+                  type: Type.STRING,
+                },
+                suggestion: {
+                  type: Type.STRING,
+                },
+                explanation: {
+                  type: Type.STRING,
+                },
+              },
+              required: ["original", "suggestion", "explanation"],
+            },
+            description:
+              "Suggestions for improving German sentence structure and word order.",
+          },
+
+          improvedText: {
+            type: Type.STRING,
+            description:
+              "A corrected version of the learner's entire text. Preserve the original meaning and do not add new information.",
+          },
+
+          score: {
+            type: Type.OBJECT,
+            properties: {
+              grammar: {
+                type: Type.NUMBER,
+                description: "Grammar score from 0 to 10.",
+              },
+              vocabulary: {
+                type: Type.NUMBER,
+                description: "Vocabulary score from 0 to 10.",
+              },
+              sentenceStructure: {
+                type: Type.NUMBER,
+                description: "Sentence structure score from 0 to 10.",
+              },
+              overall: {
+                type: Type.NUMBER,
+                description: "Overall writing score from 0 to 10.",
+              },
+            },
+            required: ["grammar", "vocabulary", "sentenceStructure", "overall"],
+          },
+        },
+
+        required: [
+          "overallFeedback",
+          "strengths",
+          "grammarMistakes",
+          "vocabularyFeedback",
+          "sentenceStructureFeedback",
+          "improvedText",
+          "score",
+        ],
+      },
+    },
+  });
+
+  if (!response.text) {
+    throw new Error("Empty response received from the model.");
+  }
+
+  return JSON.parse(response.text) as WritingAnalysisResponse;
+}

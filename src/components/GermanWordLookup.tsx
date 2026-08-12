@@ -424,7 +424,6 @@ export default function GermanWordLookup({
       } finally {
         setAiLoading(false);
       }
-      console.log(explanation);
     },
     [selectedWord, contextSentence],
   );

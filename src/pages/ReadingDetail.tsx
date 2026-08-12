@@ -45,7 +45,6 @@ export default function ReadingDetail() {
           setContextSentence(match.trim());
         }
       }
-      console.log(selectedWord);
 
       setPopupPos({
         x: e.clientX,

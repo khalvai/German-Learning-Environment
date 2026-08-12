@@ -19,7 +19,8 @@ function App() {
         <Route path="/listening" element={<Listening />} />
 
         <Route path="/writings" element={<Writings />} />
-        <Route path="/writing/editor" element={<WritingEditor />} />
+        <Route path="/writings/new" element={<WritingEditor />} />
+        <Route path="/writings/:id" element={<WritingEditor />} />
       </Routes>
     </HashRouter>
   );
