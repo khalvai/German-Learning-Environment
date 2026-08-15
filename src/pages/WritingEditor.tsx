@@ -31,6 +31,7 @@ export default function WritingEditor() {
     async function loadWriting() {
       const writing = await getWriting(id!);
 
+      console.log(writing);
       if (writing) {
         setTitle(writing.title);
         setText(writing.content);
@@ -92,18 +93,26 @@ export default function WritingEditor() {
           </button>
         </header>
 
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Start writing..."
-          spellCheck={false}
-          className={`flex-1 py-2 px-8 w-full h-full resize-none bg-transparent  leading-7 outline-none ${activeTab === "critique" ? "h-1/2" : "h-full"}`}
-        />
+        {activeTab === "prompt" && (
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Start writing..."
+            spellCheck={false}
+            className={`flex-1 py-2 px-8 w-full h-full resize-none bg-transparent  leading-7 outline-none`}
+          />
+        )}
 
         {activeTab === "critique" && analysis && (
           <>
+            {PresentWithDictation({
+              essay: text,
+              items: analysis.grammarMistakes,
+            })}
             <div className="flex-1 h-1/2 overflow-auto pt-2 px-8 border-t border-app-border ">
-              <p className="whitespace-pre-wrap leading-7">
+              <h3>Improved version:</h3>
+
+              <p className="whitespace-pre-wrap font-serif leading-relaxed">
                 {analysis.improvedText}
               </p>
             </div>
@@ -314,6 +323,126 @@ function FeedbackSection({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+type CorrectionItem = {
+  original: string;
+  correction?: string;
+  suggestion?: string;
+  explanation: string;
+};
+
+interface PresentWithDictationProps {
+  essay: string;
+  items: CorrectionItem[];
+}
+
+type Segment =
+  | { type: "text"; content: string; key: string }
+  | { type: "item"; item: CorrectionItem; key: string };
+
+function buildSegments(essay: string, items: CorrectionItem[]): Segment[] {
+  const segments: Segment[] = [];
+  let cursor = 0;
+
+  items.forEach((item, idx) => {
+    if (!item.original) return;
+    const matchIndex = essay.indexOf(item.original, cursor);
+    if (matchIndex === -1) {
+      return;
+    }
+    if (matchIndex > cursor) {
+      segments.push({
+        type: "text",
+        content: essay.slice(cursor, matchIndex),
+        key: `text-${idx}`,
+      });
+    }
+    segments.push({ type: "item", item, key: `item-${idx}` });
+    cursor = matchIndex + item.original.length;
+  });
+
+  if (cursor < essay.length) {
+    segments.push({
+      type: "text",
+      content: essay.slice(cursor),
+      key: "text-end",
+    });
+  }
+
+  return segments;
+}
+
+function CorrectionMark({ item }: { item: CorrectionItem }) {
+  const [open, setOpen] = useState(false);
+
+  const isSuggestionOnly = !item.correction && !!item.suggestion;
+  const replacement = item.correction ?? item.suggestion;
+
+  return (
+    <span className="relative inline-block">
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((o) => !o)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
+        className="cursor-pointer outline-none"
+      >
+        {isSuggestionOnly ? (
+          <span className="underline decoration-wavy decoration-amber-400 decoration-2 underline-offset-4 text-amber-200">
+            {item.original}
+          </span>
+        ) : (
+          <>
+            <span className="line-through decoration-red-400 decoration-2 text-zinc-500">
+              {item.original}
+            </span>
+            {replacement && (
+              <span className="ml-1 underline decoration-emerald-400 decoration-2 underline-offset-4 text-emerald-400 font-medium">
+                {replacement}
+              </span>
+            )}
+          </>
+        )}
+      </span>
+
+      {open && (
+        <span className="absolute z-10 left-0 top-full mt-1 w-64 rounded-md border border-slate-200 bg-white p-3 text-xs leading-snug text-slate-700 shadow-lg whitespace-normal">
+          {isSuggestionOnly && item.suggestion && (
+            <span className="mb-1 block font-medium text-sky-700">
+              Vorschlag: {item.suggestion}
+            </span>
+          )}
+          {item.explanation}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function PresentWithDictation({ essay, items }: PresentWithDictationProps) {
+  const segments = buildSegments(essay, items);
+
+  return (
+    <div className=" mx-auto max-w-2xl rounded-lg border border-app-border  p-6 font-serif">
+      <div className="whitespace-pre-wrap text-base leading-relaxed">
+        {segments.map((seg) =>
+          seg.type === "text" ? (
+            <span key={seg.key}>{seg.content}</span>
+          ) : (
+            <CorrectionMark key={seg.key} item={seg.item} />
+          ),
+        )}
       </div>
     </div>
   );

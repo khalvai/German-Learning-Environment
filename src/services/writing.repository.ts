@@ -111,6 +111,7 @@ function parseWriting(markdown: string): Writing {
     /## AI Critique\s*\n([\s\S]*?)(?=\n## |\s*$)/,
   );
 
+  console.log(`there is ai:${aiCritiqueMatch}`);
   return {
     id: id?.[1]?.trim() ?? "",
     title: titleMatch?.[1]?.trim() ?? "",
