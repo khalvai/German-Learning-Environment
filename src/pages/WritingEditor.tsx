@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Save } from "lucide-react";
+import { Save, Sparkles } from "lucide-react";
 import { saveWriting, getWriting } from "../services/writing.repository";
 import { useParams } from "react-router-dom";
 import {
@@ -7,22 +7,22 @@ import {
   WritingAnalysisResponse,
 } from "../services/ai-integration";
 
+type Mode = "writing" | "dictation";
+
 export default function WritingEditor() {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [question, setQuestion] = useState("");
-
   const [analysis, setAnalysis] = useState<WritingAnalysisResponse | null>(
     null,
   );
-
-  const [activeTab, setActiveTab] = useState<"prompt" | "critique">("prompt");
-
+  const [mode, setMode] = useState<Mode>("writing");
   const [analyzing, setAnalyzing] = useState(false);
 
-  const wordCount = useMemo(() => {
-    return text.trim() ? text.trim().split(/\s+/).length : 0;
-  }, [text]);
+  const wordCount = useMemo(
+    () => (text.trim() ? text.trim().split(/\s+/).length : 0),
+    [text],
+  );
 
   const { id } = useParams();
 
@@ -30,242 +30,334 @@ export default function WritingEditor() {
     if (!id) return;
     async function loadWriting() {
       const writing = await getWriting(id!);
-
-      console.log(writing);
       if (writing) {
         setTitle(writing.title);
         setText(writing.content);
         setQuestion(writing.question);
-        setAnalysis(JSON.parse(writing.AICritics ?? ""));
+        setAnalysis(writing.AICritics ? JSON.parse(writing.AICritics) : null);
       }
     }
-
     loadWriting();
   }, [id]);
 
   const handleSave = async () => {
     await saveWriting(title, text, question, JSON.stringify(analysis));
   };
+
   const handleAnalyze = async () => {
     setAnalyzing(true);
-
     try {
       const result = await analyzeWriting(text);
-      console.log(`Analysis: ${JSON.stringify(result)}`);
       setAnalysis(result);
+      setMode("dictation");
     } finally {
       setAnalyzing(false);
     }
   };
+
   return (
-    <div className="flex h-screen text-white">
-      {/* Writing Area */}
-      <section className="flex h-full w-[65%] flex-col border-r border-app-border">
-        <header className="flex items-center gap-4 border-b border-app-border px-6 py-4">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Writing title..."
-            className="flex-1 text-center"
+    <div className="flex h-screen flex-col text-white">
+      <TopBar
+        title={title}
+        onTitleChange={setTitle}
+        wordCount={wordCount}
+        mode={mode}
+        onModeChange={setMode}
+        hasAnalysis={!!analysis}
+        onSave={handleSave}
+        onAnalyze={handleAnalyze}
+        analyzing={analyzing}
+        canAnalyze={!!text.trim()}
+      />
+
+      <div className="flex flex-1 overflow-hidden">
+        {mode === "writing" ? (
+          <WritingMode
+            text={text}
+            onTextChange={setText}
+            question={question}
+            onQuestionChange={setQuestion}
           />
-
-          <span className="text-sm text-slate-400">{wordCount} words</span>
-
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium hover:bg-indigo-600"
-          >
-            <Save className="h-4 w-4" />
-            Save
-          </button>
-          <button
-            onClick={handleAnalyze}
-            disabled={analyzing || !text.trim()}
-            className="flex h-11"
-          >
-            {analyzing ? (
-              "Analyzing..."
-            ) : (
-              <>
-                <span>✦</span>
-              </>
-            )}
-          </button>
-        </header>
-
-        {activeTab === "prompt" && (
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Start writing..."
-            spellCheck={false}
-            className={`flex-1 py-2 px-8 w-full h-full resize-none bg-transparent  leading-7 outline-none`}
-          />
+        ) : (
+          <DictationMode text={text} analysis={analysis} />
         )}
+      </div>
+    </div>
+  );
+}
 
-        {activeTab === "critique" && analysis && (
+/* ------------------------------------------------------------------ */
+/* Top bar: title, word count, mode switch, actions                    */
+/* ------------------------------------------------------------------ */
+
+function TopBar({
+  title,
+  onTitleChange,
+  wordCount,
+  mode,
+  onModeChange,
+  hasAnalysis,
+  onSave,
+  onAnalyze,
+  analyzing,
+  canAnalyze,
+}: {
+  title: string;
+  onTitleChange: (v: string) => void;
+  wordCount: number;
+  mode: Mode;
+  onModeChange: (m: Mode) => void;
+  hasAnalysis: boolean;
+  onSave: () => void;
+  onAnalyze: () => void;
+  analyzing: boolean;
+  canAnalyze: boolean;
+}) {
+  return (
+    <header className="flex items-center gap-4 border-b border-app-border px-6 py-4">
+      <input
+        value={title}
+        onChange={(e) => onTitleChange(e.target.value)}
+        placeholder="Writing title..."
+        className="flex-1 bg-transparent text-center outline-none"
+      />
+
+      <ModeTabs
+        mode={mode}
+        onModeChange={onModeChange}
+        hasAnalysis={hasAnalysis}
+      />
+
+      <span className="text-sm text-slate-400">{wordCount} words</span>
+
+      <button
+        onClick={onSave}
+        className="flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium hover:bg-indigo-600"
+      >
+        <Save className="h-4 w-4" />
+        Save
+      </button>
+
+      <button
+        onClick={onAnalyze}
+        disabled={analyzing || !canAnalyze}
+        className="flex h-11 items-center gap-2 rounded-lg border border-app-border px-4 text-sm font-medium disabled:opacity-50"
+      >
+        {analyzing ? (
+          "Analyzing..."
+        ) : (
           <>
-            {PresentWithDictation({
-              essay: text,
-              items: analysis.grammarMistakes,
-            })}
-            <div className="flex-1 h-1/2 overflow-auto pt-2 px-8 border-t border-app-border ">
-              <h3>Improved version:</h3>
-
-              <p className="whitespace-pre-wrap font-serif leading-relaxed">
-                {analysis.improvedText}
-              </p>
-            </div>
+            <Sparkles className="h-4 w-4" />
+            Analyze
           </>
         )}
+      </button>
+    </header>
+  );
+}
+
+function ModeTabs({
+  mode,
+  onModeChange,
+  hasAnalysis,
+}: {
+  mode: Mode;
+  onModeChange: (m: Mode) => void;
+  hasAnalysis: boolean;
+}) {
+  return (
+    <div className="flex rounded-lg border border-app-border p-1 text-sm">
+      <button
+        onClick={() => onModeChange("writing")}
+        className={`rounded-md px-3 py-1.5 transition-colors ${
+          mode === "writing"
+            ? "bg-indigo-500 text-white"
+            : "text-slate-400 hover:text-slate-200"
+        }`}
+      >
+        Writing
+      </button>
+      <button
+        onClick={() => hasAnalysis && onModeChange("dictation")}
+        disabled={!hasAnalysis}
+        className={`rounded-md px-3 py-1.5 transition-colors ${
+          mode === "dictation"
+            ? "bg-indigo-500 text-white"
+            : "text-slate-400 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+        }`}
+      >
+        Dictation
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Writing mode: essay editor + prompt/question panel                  */
+/* ------------------------------------------------------------------ */
+
+function WritingMode({
+  text,
+  onTextChange,
+  question,
+  onQuestionChange,
+}: {
+  text: string;
+  onTextChange: (v: string) => void;
+  question: string;
+  onQuestionChange: (v: string) => void;
+}) {
+  return (
+    <>
+      <section className="flex h-full w-[65%] flex-col border-r border-app-border">
+        <textarea
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder="Start writing..."
+          spellCheck={false}
+          className="h-full w-full flex-1 resize-none bg-transparent px-8 py-6 leading-7 outline-none"
+        />
       </section>
 
-      {/* Question Panel */}
-      <aside className="w-[35%] h-full mt-5 overflow-y-auto">
-        <button
-          onClick={() => setActiveTab("prompt")}
-          className={`pb-2 border-b-2 transition-colors`}
-        >
-          Writing Prompt
-        </button>
+      <aside className="h-full w-[35%] overflow-y-auto p-6">
+        <h2 className="mb-5 text-lg font-semibold">Writing Prompt</h2>
 
-        <button
-          onClick={() => setActiveTab("critique")}
-          className={`pb-2 border-b-2 transition-colors`}
-        >
-          AI Critique
-        </button>
-
-        {activeTab === "critique" && analysis && (
-          <section className="space-y-6 rounded-lg p-6">
-            {/* Header */}
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-100">
-                Writing Analysis
-              </h2>
-            </div>
-
-            {/* Score */}
-            <div>
-              <h3 className="mb-3">Score</h3>
-
-              <div className="grid grid-cols-4 gap-3">
-                <Score label="Overall" value={analysis.score.overall} />
-                <Score label="Grammar" value={analysis.score.grammar} />
-                <Score label="Vocabulary" value={analysis.score.vocabulary} />
-                <Score
-                  label="Structure"
-                  value={analysis.score.sentenceStructure}
-                />
-              </div>
-            </div>
-
-            {/* Overall feedback */}
-            <div>
-              <h3 className="mb-2 text-sm font-medium text-zinc-300">
-                Overall feedback
-              </h3>
-
-              <p className="text-sm leading-6 text-zinc-400">
-                {analysis.overallFeedback}
-              </p>
-            </div>
-
-            {/* Strengths */}
-            {analysis.strengths.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-medium text-zinc-300">
-                  What you did well
-                </h3>
-
-                <ul className="space-y-2">
-                  {analysis.strengths.map((strength, index) => (
-                    <li key={index} className="text-sm leading-6 text-zinc-400">
-                      <span className="mr-2 text-emerald-400">✓</span>
-                      {strength}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Grammar mistakes */}
-            {analysis.grammarMistakes.length > 0 && (
-              <FeedbackSection
-                title="Grammar mistakes"
-                items={analysis.grammarMistakes.map((mistake) => ({
-                  original: mistake.original,
-                  correction: mistake.correction,
-                  explanation: mistake.explanation,
-                }))}
-                type="grammar"
-              />
-            )}
-
-            {/* Vocabulary */}
-            {analysis.vocabularyFeedback.length > 0 && (
-              <FeedbackSection
-                title="Vocabulary"
-                items={analysis.vocabularyFeedback}
-                type="suggestion"
-              />
-            )}
-
-            {/* Sentence structure */}
-            {analysis.sentenceStructureFeedback.length > 0 && (
-              <FeedbackSection
-                title="Sentence structure"
-                items={analysis.sentenceStructureFeedback}
-                type="suggestion"
-              />
-            )}
-
-            {/* Improved text */}
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-zinc-300">
-                Improved version
-              </h3>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "prompt" && (
-          <div className="sticky h-full top-0 p-6">
-            <h2 className="mb-5 text-lg font-semibold">Writing Prompt</h2>
-
-            <div className="rounded-xl  h-full  p-5">
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Questions ..."
-                spellCheck={false}
-                className="
-                h-full
-                w-full
-                resize-none
-                bg-transparent
-                text-lg
-                leading-9
-                outline-none
-                placeholder:text-slate-500
-              "
-              />
-            </div>
-          </div>
-        )}
+        <div className="h-full rounded-xl p-5">
+          <textarea
+            value={question}
+            onChange={(e) => onQuestionChange(e.target.value)}
+            placeholder="Questions ..."
+            spellCheck={false}
+            className="h-full w-full resize-none bg-transparent text-lg leading-9 outline-none placeholder:text-slate-500"
+          />
+        </div>
       </aside>
-    </div>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Dictation mode: annotated essay + improved text + analysis panel    */
+/* ------------------------------------------------------------------ */
+
+function DictationMode({
+  text,
+  analysis,
+}: {
+  text: string;
+  analysis: WritingAnalysisResponse | null;
+}) {
+  if (!analysis) return null;
+
+  return (
+    <>
+      <section className="flex h-full w-[65%] flex-col overflow-y-auto border-r border-app-border">
+        <div className="space-y-6 p-8">
+          <div>
+            <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Your essay
+            </h3>
+            <AnnotatedEssay essay={text} items={analysis.grammarMistakes} />
+          </div>
+
+          <div className="border-t border-app-border pt-6">
+            <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Improved version
+            </h3>
+            <p className="whitespace-pre-wrap rounded-lg border border-app-border p-6 font-serif leading-relaxed">
+              {analysis.improvedText}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <aside className="h-full w-[35%] overflow-y-auto">
+        <AnalysisPanel analysis={analysis} />
+      </aside>
+    </>
+  );
+}
+
+function AnalysisPanel({ analysis }: { analysis: WritingAnalysisResponse }) {
+  return (
+    <section className="space-y-6 p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-100">
+          Writing Analysis
+        </h2>
+      </div>
+
+      <div>
+        <h3 className="mb-3 text-sm font-medium text-zinc-300">Score</h3>
+        <div className="grid grid-cols-4 gap-3">
+          <Score label="Overall" value={analysis.score.overall} />
+          <Score label="Grammar" value={analysis.score.grammar} />
+          <Score label="Vocabulary" value={analysis.score.vocabulary} />
+          <Score label="Structure" value={analysis.score.sentenceStructure} />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-sm font-medium text-zinc-300">
+          Overall feedback
+        </h3>
+        <p className="text-sm leading-6 text-zinc-400">
+          {analysis.overallFeedback}
+        </p>
+      </div>
+
+      {analysis.strengths.length > 0 && (
+        <div>
+          <h3 className="mb-3 text-sm font-medium text-zinc-300">
+            What you did well
+          </h3>
+          <ul className="space-y-2">
+            {analysis.strengths.map((strength, index) => (
+              <li key={index} className="text-sm leading-6 text-zinc-400">
+                <span className="mr-2 text-emerald-400">✓</span>
+                {strength}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {analysis.grammarMistakes.length > 0 && (
+        <FeedbackSection
+          title="Grammar mistakes"
+          items={analysis.grammarMistakes.map((mistake) => ({
+            original: mistake.original,
+            correction: mistake.correction,
+            explanation: mistake.explanation,
+          }))}
+          type="grammar"
+        />
+      )}
+
+      {analysis.vocabularyFeedback.length > 0 && (
+        <FeedbackSection
+          title="Vocabulary"
+          items={analysis.vocabularyFeedback}
+          type="suggestion"
+        />
+      )}
+
+      {analysis.sentenceStructureFeedback.length > 0 && (
+        <FeedbackSection
+          title="Sentence structure"
+          items={analysis.sentenceStructureFeedback}
+          type="suggestion"
+        />
+      )}
+    </section>
   );
 }
 
 function Score({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-zinc-800 bg-zinc-800 p-3">
-      <div className="text-xs text-zinc-500">{label.slice(0, 5)}</div>
-
-      <div className="mt-1 text-lg font-semibold flex text-zinc-200">
-        {value}/10
-      </div>
+      <div className="truncate text-xs text-zinc-500">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-zinc-200">{value}/10</div>
     </div>
   );
 }
@@ -287,35 +379,26 @@ function FeedbackSection({
   return (
     <div>
       <h3 className="mb-3 text-sm font-medium text-zinc-300">{title}</h3>
-
       <div className="space-y-3">
         {items.map((item, index) => (
-          <div
-            key={index}
-            className="rounded-md border border-zinc-800 bg-zinc-950 p-4"
-          >
+          <div key={index} className="rounded-md border border-zinc-800  p-4">
             <div className="space-y-2 text-sm">
               <div>
                 <span className="text-xs text-zinc-500">
                   {type === "grammar" ? "Your sentence" : "Original"}
                 </span>
-
                 <p className="mt-1 text-red-300">{item.original}</p>
               </div>
-
               <div>
                 <span className="text-xs text-zinc-500">
                   {type === "grammar" ? "Correction" : "Suggestion"}
                 </span>
-
                 <p className="mt-1 text-emerald-300">
                   {item.correction ?? item.suggestion}
                 </p>
               </div>
-
               <div>
                 <span className="text-xs text-zinc-500">Why</span>
-
                 <p className="mt-1 leading-6 text-zinc-400">
                   {item.explanation}
                 </p>
@@ -335,11 +418,6 @@ type CorrectionItem = {
   explanation: string;
 };
 
-interface PresentWithDictationProps {
-  essay: string;
-  items: CorrectionItem[];
-}
-
 type Segment =
   | { type: "text"; content: string; key: string }
   | { type: "item"; item: CorrectionItem; key: string };
@@ -351,9 +429,8 @@ function buildSegments(essay: string, items: CorrectionItem[]): Segment[] {
   items.forEach((item, idx) => {
     if (!item.original) return;
     const matchIndex = essay.indexOf(item.original, cursor);
-    if (matchIndex === -1) {
-      return;
-    }
+    if (matchIndex === -1) return;
+
     if (matchIndex > cursor) {
       segments.push({
         type: "text",
@@ -404,7 +481,7 @@ function CorrectionMark({ item }: { item: CorrectionItem }) {
           </span>
         ) : (
           <>
-            <span className="line-through decoration-red-400 decoration-2 text-zinc-500">
+            <span className="line-through decoration-red-400 decoration-2">
               {item.original}
             </span>
             {replacement && (
@@ -430,11 +507,17 @@ function CorrectionMark({ item }: { item: CorrectionItem }) {
   );
 }
 
-function PresentWithDictation({ essay, items }: PresentWithDictationProps) {
+function AnnotatedEssay({
+  essay,
+  items,
+}: {
+  essay: string;
+  items: CorrectionItem[];
+}) {
   const segments = buildSegments(essay, items);
 
   return (
-    <div className=" mx-auto max-w-2xl rounded-lg border border-app-border  p-6 font-serif">
+    <div className="rounded-lg border border-app-border p-6 font-serif">
       <div className="whitespace-pre-wrap text-base leading-relaxed">
         {segments.map((seg) =>
           seg.type === "text" ? (
