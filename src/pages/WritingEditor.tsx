@@ -215,7 +215,7 @@ function WritingMode({
           onChange={(e) => onTextChange(e.target.value)}
           placeholder="Start writing..."
           spellCheck={false}
-          className="px-8 py-6 leading-7 outline-none h-full w-full  md:h-full md:w-[65%]  md:max-w-[900px] resize-none"
+          className="px-8 py-6 leading-7 outline-none h-full w-full  md:h-full md:w-[65%] md:max-w-225 resize-none"
         />
       </div>
       <textarea
@@ -223,7 +223,7 @@ function WritingMode({
         onChange={(e) => onQuestionChange(e.target.value)}
         placeholder="Questions ..."
         spellCheck={false}
-        className="resize-none h-1/3 text-lg leading-9 outline-none overflow-y-auto  p-6 md:h-full md:w-[35%] order-first md:order-last"
+        className="h-1/3 text-lg leading-9 outline-none overflow-y-auto  p-6 md:h-full md:w-[35%] order-first md:order-last font-serif  resize-none"
       />
     </div>
   );
