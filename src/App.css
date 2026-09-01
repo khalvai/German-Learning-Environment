@@ -2,7 +2,7 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-app-border: #39393a;
+  --color-app-border:rgb(100, 100, 101);
 }
 
 :root {
@@ -22,53 +22,14 @@
   -webkit-text-size-adjust: 100%;
 }
 
-input,
-button {
-  border-radius: 10px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: rgb(68, 68, 70);
-
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
 button {
   cursor: pointer;
-}
-
-button:hover {
-  border-color: rgb(54, 87, 158);
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
     background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: rgb(173, 173, 173);
-  }
-  button:active {
-    background-color: #0f0f0f69;
   }
 }
 

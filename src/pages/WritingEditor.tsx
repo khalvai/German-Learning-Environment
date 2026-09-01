@@ -6,6 +6,7 @@ import {
   analyzeWriting,
   WritingAnalysisResponse,
 } from "../services/ai-integration";
+import Button from "../components/Button";
 
 type Mode = "writing" | "dictation";
 
@@ -119,7 +120,7 @@ function TopBar({
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
         placeholder="Writing title..."
-        className="flex-1 bg-transparent text-center outline-none"
+        className="  text-center border-b border-app-border outline-none me-auto field-sizing-content max-w-[50%]"
       />
 
       <ModeTabs
@@ -130,28 +131,27 @@ function TopBar({
 
       <span className="text-sm text-slate-400">{wordCount} words</span>
 
-      <button
-        onClick={onSave}
-        className="flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium hover:bg-indigo-600"
-      >
+      <Button onClick={onSave} disabled={false} className=" hover:bg-gray-400">
         <Save className="h-4 w-4" />
         Save
-      </button>
+      </Button>
 
-      <button
-        onClick={onAnalyze}
-        disabled={analyzing || !canAnalyze}
-        className="flex h-11 items-center gap-2 rounded-lg border border-app-border px-4 text-sm font-medium disabled:opacity-50"
-      >
-        {analyzing ? (
-          "Analyzing..."
-        ) : (
-          <>
-            <Sparkles className="h-4 w-4" />
-            Analyze
-          </>
-        )}
-      </button>
+      {!hasAnalysis && (
+        <button
+          onClick={onAnalyze}
+          disabled={analyzing || !canAnalyze}
+          className="flex h-11 items-center gap-2 rounded-lg border border-app-border px-4 text-sm font-medium disabled:opacity-50"
+        >
+          {analyzing ? (
+            "Analyzing..."
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Analyze
+            </>
+          )}
+        </button>
+      )}
     </header>
   );
 }
