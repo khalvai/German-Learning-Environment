@@ -120,7 +120,7 @@ function TopBar({
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
         placeholder="Writing title..."
-        className="  text-center border-b border-app-border outline-none me-auto field-sizing-content max-w-[50%]"
+        className="  text-center bottom-border-app-border outline-none me-auto field-sizing-content max-w-[50%]"
       />
 
       <ModeTabs
@@ -208,31 +208,24 @@ function WritingMode({
   onQuestionChange: (v: string) => void;
 }) {
   return (
-    <>
-      <section className="flex h-full w-[65%] flex-col border-r border-app-border">
+    <div className="flex h-full w-full flex-col md:flex-row">
+      <div className="h-full  w-full  border-t border-app-border md:h-full md:w-[65%] md:border-b-0 md:border-r">
         <textarea
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
           placeholder="Start writing..."
           spellCheck={false}
-          className="h-full w-full flex-1 resize-none bg-transparent px-8 py-6 leading-7 outline-none"
+          className="px-8 py-6 leading-7 outline-none h-full w-full  md:h-full md:w-[65%]  md:max-w-[900px] resize-none"
         />
-      </section>
-
-      <aside className="h-full w-[35%] overflow-y-auto p-6">
-        <h2 className="mb-5 text-lg font-semibold">Writing Prompt</h2>
-
-        <div className="h-full rounded-xl p-5">
-          <textarea
-            value={question}
-            onChange={(e) => onQuestionChange(e.target.value)}
-            placeholder="Questions ..."
-            spellCheck={false}
-            className="h-full w-full resize-none bg-transparent text-lg leading-9 outline-none placeholder:text-slate-500"
-          />
-        </div>
-      </aside>
-    </>
+      </div>
+      <textarea
+        value={question}
+        onChange={(e) => onQuestionChange(e.target.value)}
+        placeholder="Questions ..."
+        spellCheck={false}
+        className="resize-none h-1/3 text-lg leading-9 outline-none overflow-y-auto  p-6 md:h-full md:w-[35%] order-first md:order-last"
+      />
+    </div>
   );
 }
 
