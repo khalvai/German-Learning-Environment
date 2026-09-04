@@ -19,7 +19,7 @@ function ReadingCard({
           e.stopPropagation();
           await onRemove();
         }}
-        className="absolute top-3 right-3 invisible group-hover:visible text-gray-500 hover:text-red-500 transition"
+        className="invisible group-hover:visible text-gray-500 hover:text-red-500 transition ml-auto "
       >
         <Trash className="w-4 h-4" />
       </button>

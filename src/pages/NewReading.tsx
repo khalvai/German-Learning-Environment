@@ -1,22 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { saveReading } from "../services/reading.repository";
-import type { Reading } from "../services/reading.repository";
 import Button from "../components/Button";
 import { Save } from "lucide-react";
-
-const LEVELS: Reading["level"][] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 export default function NewReading() {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
-  const [level, setLevel] = useState<Reading["level"]>("A2");
   const [originalText, setOriginalText] = useState("");
-  const [translation, setTranslation] = useState("");
-  const [vocabulary, setVocabulary] = useState("");
-  const [notes, setNotes] = useState("");
-  const [tags, setTags] = useState("");
+
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
@@ -28,16 +21,7 @@ export default function NewReading() {
     setSaving(true);
 
     try {
-      const id = await saveReading(title, originalText, {
-        translation: translation.trim() || undefined,
-        vocabulary: vocabulary.trim() || undefined,
-        notes: notes.trim() || undefined,
-        tags: tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-        level,
-      });
+      const id = await saveReading(title, originalText);
 
       navigate(`/reading/${id}`);
     } catch (error) {
