@@ -215,7 +215,7 @@ function WritingMode({
           onChange={(e) => onTextChange(e.target.value)}
           placeholder="Start writing..."
           spellCheck={false}
-          className="px-8 py-6 leading-7 outline-none h-full w-full  md:h-full md:w-[65%] md:max-w-225 resize-none"
+          className="px-8 py-6 leading-7 outline-none h-full w-full  md:h-full md:w-[90%] resize-none"
         />
       </div>
       <textarea
