@@ -10,7 +10,7 @@ import {
 export interface Reading {
   id: string;
   title: string;
-  level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+  level?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
   createdAt: Date;
   tags?: string[];
   originalText: string; // German text
@@ -22,12 +22,12 @@ export interface Reading {
 export async function saveReading(
   title: string,
   originalText: string,
-  level: Reading["level"],
   options?: {
     translation?: string;
     vocabulary?: string;
     notes?: string;
     tags?: string[];
+    level: Reading["level"];
   },
 ) {
   const id = crypto.randomUUID();
@@ -36,7 +36,7 @@ export async function saveReading(
   let markdown = `---
 id: ${id}
 title: ${title}
-level: ${level}
+level: ${options?.level}
 createdAt: ${createdAt}
 ${options?.tags ? `tags: [${options.tags.join(", ")}]` : ""}
 ---
@@ -123,7 +123,7 @@ function parseReading(markdown: string): Reading {
   return {
     id,
     title,
-    level: level || "A1",
+    level,
     createdAt: createdAtStr ? new Date(createdAtStr) : new Date(),
     tags,
     originalText: getSection("Original Text") ?? "",
