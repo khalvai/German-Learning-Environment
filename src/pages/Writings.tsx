@@ -6,6 +6,40 @@ import {
 } from "../services/writing.repository";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { Plus, Trash } from "lucide-react";
+
+function WritingCard({
+  writing,
+  onRemove,
+}: {
+  writing: Writing;
+  onRemove: () => Promise<void>;
+}) {
+  return (
+    <div className="group flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg">
+      <Trash
+        className="invisible group-hover:visible ml-auto text-xs text-gray-500 hover:hover:brightness-15 "
+        onClick={async () => {
+          await onRemove();
+        }}
+      />
+      <Link
+        to={`/writings/${writing.id}`}
+        className="grid items-center w-full h-full"
+      >
+        <h2 className="text-l">{writing.title}</h2>
+
+        <pre className="line-clamp-6 text-sm text-gray-400 wrap-break-word">
+          {writing.content}
+        </pre>
+        <p className="text-gray-500 text-xs mt-auto">
+          {" "}
+          {writing.createdAt.toLocaleString()}
+        </p>
+      </Link>
+    </div>
+  );
+}
 
 export default function Writings() {
   const [writings, setWritings] = useState<Writing[]>([]);
@@ -21,53 +55,35 @@ export default function Writings() {
   }, []);
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-3xl font-bold">My Writings</h1>
-
-      <button
-        className="text-2xl text-stone-300 font-bold"
-        onClick={() => {
-          navigate("/writings/new");
-        }}
-      >
-        {" "}
-        Write
-      </button>
-
-      {writings.length === 0 && (
-        <p className="text-gray-400">No writings yet.</p>
-      )}
-
-      {writings.map((writing) => (
-        <div key={writing.id} className="boarder app-card rounded-lg p-4">
-          <Link
-            key={writing.id}
-            to={`/writings/${writing.id}`}
-            className="flex justify-between rounded-lg p-4"
+    <div>
+      <nav className="h-16 px-6 flex items-center justify-between border-b border-app-border">
+        <h1 className="text-2xl font-bold">My Writings</h1>
+      </nav>
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-[repeat(auto-fit,195px)] justify-center gap-4">
+          <div
+            className="flex flex-col justify-center items-center p-4 h-65 w-49 border app-card rounded-lg"
+            onClick={() => {
+              navigate("/writings/new");
+            }}
           >
-            <h2 className="text-xl mb-2">{writing.title}</h2>
+            <Plus className="h-12 w-12" />
+          </div>
 
-            <pre className="text-sm text-gray-400 m-">
-              {writing.content.slice(0, 30)}
-            </pre>
-
-            <button
-              className="h-10 w-auto my-5"
-              onClick={async (e) => {
-                e.preventDefault();
+          {writings.map((writing) =>
+            WritingCard({
+              writing,
+              onRemove: async () => {
                 await removeWriting(writing.id);
 
                 setWritings((prev) =>
                   prev.filter((item) => item.id !== writing.id),
                 );
-              }}
-            >
-              {" "}
-              remove
-            </button>
-          </Link>
+              },
+            }),
+          )}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
