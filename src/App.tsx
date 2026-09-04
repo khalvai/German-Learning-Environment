@@ -2,11 +2,12 @@ import "./App.css";
 import { HashRouter, Routes, Route } from "react-router-dom";
 
 import Home from "./pages/Home";
-import Reading from "./pages/Reading";
 import Listening from "./pages/Listening";
 import ReadingDetail from "./pages/ReadingDetail";
 import WritingEditor from "./pages/WritingEditor";
 import Writings from "./pages/Writings";
+import Reading from "./pages/Readings";
+import NewReading from "./pages/NewReading";
 
 function App() {
   return (
@@ -15,7 +16,9 @@ function App() {
         <Route path="/" element={<Home />} />
 
         <Route path="/reading" element={<Reading />} />
-        <Route path="/readings/:id" element={<ReadingDetail />} />
+        <Route path="/reading/:id" element={<ReadingDetail />} />
+        <Route path="/reading/new" element={<NewReading />} />
+
         <Route path="/listening" element={<Listening />} />
 
         <Route path="/writings" element={<Writings />} />

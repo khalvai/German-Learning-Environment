@@ -146,7 +146,7 @@ function TopBar({
             "Analyzing..."
           ) : (
             <>
-            <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
               Analyze
             </>
           )}

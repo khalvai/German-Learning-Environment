@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import GermanWordLookup from "../components/GermanWordLookup";
 import { useParams } from "react-router-dom";
-import { getReadings } from "../services/readingService";
+import { getReading, Reading } from "../services/reading.repository";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, Languages } from "lucide-react";
@@ -20,8 +20,6 @@ type PendingSelection = {
 
 export default function ReadingDetail() {
   const { id } = useParams();
-  const readings = getReadings();
-  const reading = readings.find((r) => r.id === Number(id));
 
   const [mode, setMode] = useState<Mode>("reading");
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
@@ -32,6 +30,16 @@ export default function ReadingDetail() {
     null,
   );
   const [history, setHistory] = useState<LookupEntry[]>([]);
+
+  const [reading, setReading] = useState<Reading>();
+
+  useEffect(() => {
+    getReading(id!).then((r) => {
+      if (r) {
+        setReading(r);
+      }
+    });
+  }, []);
 
   if (!reading) {
     return (
@@ -109,7 +117,7 @@ export default function ReadingDetail() {
       <div className="flex flex-1 overflow-hidden">
         {mode === "reading" ? (
           <ReadingMode
-            content={reading.content}
+            content={reading.originalText}
             onMouseUp={handleMouseUp}
             selectedWord={selectedWord}
             contextSentence={contextSentence}

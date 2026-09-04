@@ -1,24 +1,21 @@
-import { useEffect, useState } from "react";
-import {
-  getWritings,
-  removeWriting,
-  Writing,
-} from "../services/writing.repository";
-import { Link, useNavigate } from "react-router-dom";
 import { Plus, Trash } from "lucide-react";
+import { getReadings, removeReading } from "../services/reading.repository";
+import type { Reading } from "../services/reading.repository";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
-function WritingCard({
-  writing,
+function ReadingCard({
+  reading,
   onRemove,
 }: {
-  writing: Writing;
+  reading: Reading;
   onRemove: () => Promise<void>;
 }) {
   return (
-    <div className="group flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg relative">
+    <div className="group relative flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg">
       <button
         onClick={async (e) => {
-          e.preventDefault(); // prevent Link navigation
+          e.preventDefault();
           e.stopPropagation();
           await onRemove();
         }}
@@ -28,57 +25,64 @@ function WritingCard({
       </button>
 
       <Link
-        to={`/writings/${writing.id}`}
+        to={`/reading/${reading.id}`}
         className="flex flex-col w-full h-full"
       >
         <h2 className="text-base font-medium mb-2 line-clamp-2">
-          {writing.title}
+          {reading.title}
         </h2>
 
         <pre className="line-clamp-6 text-sm text-gray-400 whitespace-pre-wrap flex-1">
-          {writing.content}
+          {reading.originalText}
         </pre>
 
         <p className="text-gray-500 text-xs mt-auto pt-2">
-          {writing.createdAt.toLocaleString()}
+          {reading.createdAt.toLocaleString()}
         </p>
       </Link>
     </div>
   );
 }
 
-export default function Writings() {
-  const [writings, setWritings] = useState<Writing[]>([]);
-  const navigate = useNavigate(); // ← Must be inside the component
+export default function Reading() {
+  const [readings, setReadings] = useState<Reading[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    getWritings().then(setWritings);
+    getReadings()
+      .then(setReadings)
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return <div className="p-10">Loading readings...</div>;
+  }
 
   return (
     <div>
       <nav className="h-16 px-6 flex items-center justify-between border-b border-app-border">
-        <h1 className="text-2xl font-bold">My Writings</h1>
+        <h1 className="text-2xl font-bold">Readings</h1>
       </nav>
 
       <div className="p-6">
         <div className="grid grid-cols-[repeat(auto-fit,195px)] justify-center gap-4">
-          {/* Add new button */}
+          {/* Add new reading */}
           <div
-            onClick={() => navigate("/writings/new")}
+            onClick={() => navigate("/reading/new")}
             className="flex flex-col justify-center items-center p-4 h-[260px] w-[195px] border app-card rounded-lg cursor-pointer hover:bg-white/5 transition"
           >
             <Plus className="h-12 w-12" />
           </div>
 
-          {writings.map((writing) => (
-            <WritingCard
-              key={writing.id}
-              writing={writing}
+          {readings.map((reading) => (
+            <ReadingCard
+              key={reading.id}
+              reading={reading}
               onRemove={async () => {
-                await removeWriting(writing.id);
-                setWritings((prev) =>
-                  prev.filter((item) => item.id !== writing.id),
+                await removeReading(reading.id);
+                setReadings((prev) =>
+                  prev.filter((item) => item.id !== reading.id),
                 );
               }}
             />
