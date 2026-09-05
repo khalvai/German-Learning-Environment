@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Save, Sparkles } from "lucide-react";
 import { saveWriting, getWriting } from "../services/writing.repository";
 import { useParams } from "react-router-dom";
@@ -207,23 +207,84 @@ function WritingMode({
   question: string;
   onQuestionChange: (v: string) => void;
 }) {
+  const [textAreaWidth, setTextAreaWidth] = useState(65);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const [isDesktop, setIsDesktop] = useState(
+    () => window.matchMedia("(min-width: 768px)").matches,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px)");
+    const handleChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
+
+  const handleMouseDown = useCallback(() => {
+    isDragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let pct = ((e.clientX - rect.left) / rect.width) * 100;
+    pct = Math.min(80, Math.max(20, pct)); // clamp: never below 20% or above 80%
+    setTextAreaWidth(pct);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, []);
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
   return (
-    <div className="flex h-full w-full flex-col md:flex-row">
-      <div className="h-full  w-full  border-t border-app-border md:h-full md:w-[65%] md:border-b-0 md:border-r">
-        <textarea
-          value={text}
-          onChange={(e) => onTextChange(e.target.value)}
-          placeholder="Start writing..."
-          spellCheck={false}
-          className="px-8 py-6 leading-7 outline-none h-full w-full  md:h-full md:w-[90%] resize-none"
-        />
-      </div>
+    <div
+      ref={containerRef}
+      className="flex flex-col-reverse h-full w-full  md:flex-row"
+    >
+      <textarea
+        value={text}
+        onChange={(e) => onTextChange(e.target.value)}
+        placeholder="Questions ..."
+        spellCheck={false}
+        className=" md:h-full text-lg leading-9 outline-none  resize-none flex-1 p-10 overflow-auto"
+        style={
+          isDesktop
+            ? { width: `${textAreaWidth}%` }
+            : { height: `${textAreaWidth}` }
+        }
+      />
+
+      {isDesktop && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="w-1 cursor-row-resize md:cursor-col-resize border  border-app-border md:mx-10"
+        ></div>
+      )}
+
       <textarea
         value={question}
         onChange={(e) => onQuestionChange(e.target.value)}
         placeholder="Questions ..."
         spellCheck={false}
-        className="h-1/3 text-lg leading-9 outline-none overflow-y-auto  p-6 md:h-full md:w-[35%] order-first md:order-last font-serif  resize-none"
+        style={
+          isDesktop
+            ? { width: `${100 - textAreaWidth}%` }
+            : { height: `${100 - textAreaWidth}%` }
+        }
+        className=" md:h-full text-lg p-10 leading-9 outline-none  font-serif resize-none  md:w-[90%]"
       />
     </div>
   );
