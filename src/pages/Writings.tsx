@@ -35,11 +35,11 @@ function WritingCard({
           {writing.title}
         </h2>
 
-        <pre className="line-clamp-6 text-sm text-gray-400 whitespace-pre-wrap flex-1">
+        <pre className="text-sm text-gray-400 whitespace-pre-wrap py-2 flex-1 overflow-hidden ">
           {writing.content}
         </pre>
 
-        <p className="text-gray-500 text-xs mt-auto pt-2">
+        <p className="text-gray-500 text-xs pt-2">
           {writing.createdAt.toLocaleString()}
         </p>
       </Link>
