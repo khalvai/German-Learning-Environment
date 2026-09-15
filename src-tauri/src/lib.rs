@@ -10,7 +10,7 @@ fn api_key_entry() -> Result<Entry, String> {
 }
 
 fn read_api_key() -> Result<String, String> {
-    api_key_entry()?.get_password().map_err(|error| match error {
+    api_key_entry()?.get_password().map(|key| key.trim().to_string()).map_err(|error| match error {
         keyring::Error::NoEntry => "No API key configured. Add one from the home screen.".to_string(),
         other => other.to_string(),
     })
@@ -27,10 +27,11 @@ fn has_api_key() -> Result<bool, String> {
 
 #[tauri::command]
 fn save_api_key(api_key: String) -> Result<(), String> {
-    if api_key.trim().is_empty() {
+    let api_key = api_key.trim();
+    if api_key.is_empty() {
         return Err("API key cannot be empty.".into());
     }
-    api_key_entry()?.set_password(&api_key).map_err(|error| error.to_string())
+    api_key_entry()?.set_password(api_key).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -41,13 +42,17 @@ fn remove_api_key() -> Result<(), String> {
     }
 }
 
-async fn groq_json(system: &str, prompt: String) -> Result<serde_json::Value, String> {
+const OPENROUTER_MODEL: &str = "google/gemma-4-31b-it:free";
+
+async fn openrouter_json(system: &str, prompt: String) -> Result<serde_json::Value, String> {
     let api_key = read_api_key()?;
     let response = reqwest::Client::new()
-        .post("https://api.groq.com/openai/v1/chat/completions")
+        .post("https://openrouter.ai/api/v1/chat/completions")
         .bearer_auth(api_key)
+        .header("HTTP-Referer", "https://github.com/khalvai/environment")
+        .header("X-Title", "German Learning Environment")
         .json(&serde_json::json!({
-            "model": "openai/gpt-oss-20b",
+            "model": OPENROUTER_MODEL,
             "messages": [
                 { "role": "system", "content": system },
                 { "role": "user", "content": prompt }
@@ -57,29 +62,46 @@ async fn groq_json(system: &str, prompt: String) -> Result<serde_json::Value, St
         }))
         .send()
         .await
-        .map_err(|error| format!("Could not reach Groq: {error}"))?;
+        .map_err(|error| format!("Could not reach OpenRouter: {error}"))?;
 
     let status = response.status();
     let body: serde_json::Value = response
         .json()
         .await
-        .map_err(|error| format!("Invalid response from Groq: {error}"))?;
+        .map_err(|error| format!("Invalid response from OpenRouter: {error}"))?;
     if !status.is_success() {
-        return Err(body["error"]["message"]
-            .as_str()
-            .unwrap_or("Groq request failed.")
-            .to_string());
+        eprintln!(
+            "[openrouter] request failed, status {status}: {}",
+            serde_json::to_string_pretty(&body).unwrap_or_else(|_| body.to_string())
+        );
+        let message = body["error"]["message"].as_str().unwrap_or("OpenRouter request failed.");
+        let metadata = &body["error"]["metadata"];
+        let detail = metadata["raw"].as_str().map(str::to_string).or_else(|| {
+            (!metadata.is_null()).then(|| metadata.to_string())
+        });
+        return Err(match detail {
+            Some(detail) => format!("{message} ({status}): {detail}"),
+            None => format!("{message} ({status})"),
+        });
     }
 
     let content = body["choices"][0]["message"]["content"]
         .as_str()
-        .ok_or_else(|| "Groq returned no response content.".to_string())?;
-    serde_json::from_str(content).map_err(|_| "Groq returned malformed JSON.".to_string())
+        .ok_or_else(|| "OpenRouter returned no response content.".to_string())?;
+    let trimmed = content.trim();
+    let json_text = trimmed
+        .strip_prefix("```json")
+        .or_else(|| trimmed.strip_prefix("```"))
+        .map(|rest| rest.strip_suffix("```").unwrap_or(rest))
+        .unwrap_or(trimmed)
+        .trim();
+    serde_json::from_str(json_text)
+        .map_err(|error| format!("OpenRouter returned malformed JSON: {error}. Raw: {json_text}"))
 }
 
 #[tauri::command]
 async fn analyze_writing(content: String, question: String) -> Result<serde_json::Value, String> {
-    groq_json(
+    openrouter_json(
         "You are a German teacher for an A2 learner. Return valid JSON only with: overallFeedback (string), strengths (string[]), grammarMistakes ({original, correction, explanation}[]), vocabularyFeedback ({original, suggestion, explanation}[]), sentenceStructureFeedback ({original, suggestion, explanation}[]), improvedText (string), score ({grammar, vocabulary, sentenceStructure, overall}, each 0-10). Be encouraging, distinguish actual mistakes from optional improvements, and use simple English.",
         format!("Question to address:\n{question}\n\nWriting:\n{content}"),
     )
@@ -91,7 +113,7 @@ async fn explain_word(word: String, context_sentence: Option<String>) -> Result<
     if word.trim().is_empty() {
         return Err("The word cannot be empty.".into());
     }
-    groq_json(
+    openrouter_json(
         "You are a German teacher for an A2 learner. Return valid JSON only with: partOfSpeech, grammar (optional noun/verb/adjective objects), definitions (string[]), meaningInContext (optional string), exampleSentenceGerman, exampleSentenceEnglish. Explain in simple English. For nouns include article, singular, plural. For verbs include infinitive, presentThirdPerson, präteritumThirdPerson, perfectParticiple, perfectAuxiliary. For adjectives include comparative and superlative.",
         format!("Analyze the German word {word:?}. Context sentence: {}", context_sentence.unwrap_or_else(|| "No context sentence provided.".into())),
     )

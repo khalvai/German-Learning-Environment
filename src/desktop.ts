@@ -48,7 +48,7 @@ export function removeReading(id: string) { return invoke("remove_reading", { id
 
 export async function getWritings() { return (await invoke<WritingPayload[]>("get_writings")).map(toWriting); }
 export async function getWriting(id: string) { const writing = await invoke<WritingPayload | null>("get_writing", { id }); return writing && toWriting(writing); }
-export function saveWriting(title: string, content: string, question: string, aiCritics?: string) { return invoke<string>("save_writing", { title, content, question, aiCritics }); }
+export function saveWriting(id: string | undefined, title: string, content: string, question: string, aiCritics?: string) { return invoke<string>("save_writing", { id, title, content, question, aiCritics }); }
 export function removeWriting(id: string) { return invoke("remove_writing", { id }); }
 
 export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }

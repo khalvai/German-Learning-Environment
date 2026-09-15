@@ -1,10 +1,17 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Save, Sparkles } from "lucide-react";
 import { saveWriting, getWriting, analyzeWriting, type WritingAnalysisResponse } from "../desktop";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
 
 type Mode = "writing" | "dictation";
+
+type Snapshot = {
+  title: string;
+  text: string;
+  question: string;
+  analysisJson: string | null;
+};
 
 export default function WritingEditor() {
   const [title, setTitle] = useState("");
@@ -15,14 +22,24 @@ export default function WritingEditor() {
   );
   const [mode, setMode] = useState<Mode>("writing");
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [writingId, setWritingId] = useState<string | undefined>(undefined);
+  const [saved, setSaved] = useState<Snapshot>({
+    title: "",
+    text: "",
+    question: "",
+    analysisJson: null,
+  });
   const wordCount = useMemo(
     () => (text.trim() ? text.trim().split(/\s+/).length : 0),
     [text],
   );
 
   const { id } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    setWritingId(id);
     if (!id) return;
     async function loadWriting() {
       const writing = await getWriting(id!);
@@ -30,23 +47,49 @@ export default function WritingEditor() {
         setTitle(writing.title);
         setText(writing.content);
         setQuestion(writing.question);
-        setAnalysis(writing.AICritics ? JSON.parse(writing.AICritics) : null);
+        const loadedAnalysis = writing.AICritics
+          ? JSON.parse(writing.AICritics)
+          : null;
+        setAnalysis(loadedAnalysis);
+        setSaved({
+          title: writing.title,
+          text: writing.content,
+          question: writing.question,
+          analysisJson: writing.AICritics ?? null,
+        });
       }
     }
 
     loadWriting();
   }, [id]);
 
+  const analysisJson = analysis ? JSON.stringify(analysis) : null;
+  const isDirty =
+    title !== saved.title ||
+    text !== saved.text ||
+    question !== saved.question ||
+    analysisJson !== saved.analysisJson;
+
   const handleSave = async () => {
-    await saveWriting(title, text, question, JSON.stringify(analysis));
+    const newId = await saveWriting(writingId, title, text, question, analysisJson ?? undefined);
+    setSaved({ title, text, question, analysisJson });
+    if (!writingId) {
+      setWritingId(newId);
+      navigate(`/writings/${newId}`, { replace: true });
+    }
   };
 
   const handleAnalyze = async () => {
     setAnalyzing(true);
+    setAnalyzeError(null);
     try {
       const result = await analyzeWriting(text, question);
       setAnalysis(result);
       setMode("dictation");
+    } catch (error) {
+      setAnalyzeError(
+        typeof error === "string" ? error : "Failed to analyze writing.",
+      );
     } finally {
       setAnalyzing(false);
     }
@@ -62,9 +105,11 @@ export default function WritingEditor() {
         onModeChange={setMode}
         hasAnalysis={!!analysis}
         onSave={handleSave}
+        canSave={isDirty}
         onAnalyze={handleAnalyze}
         analyzing={analyzing}
         canAnalyze={!!text.trim()}
+        error={analyzeError}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -95,9 +140,11 @@ function TopBar({
   onModeChange,
   hasAnalysis,
   onSave,
+  canSave,
   onAnalyze,
   analyzing,
   canAnalyze,
+  error,
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -106,12 +153,22 @@ function TopBar({
   onModeChange: (m: Mode) => void;
   hasAnalysis: boolean;
   onSave: () => void;
+  canSave: boolean;
   onAnalyze: () => void;
   analyzing: boolean;
   canAnalyze: boolean;
+  error: string | null;
 }) {
   return (
-    <header className="flex items-center gap-4 border-b border-app-border px-6 py-4">
+    <header className="relative flex items-center gap-4 border-b border-app-border px-6 py-4">
+      {error && (
+        <p
+          role="alert"
+          className="absolute left-6 top-full z-10 mt-1 max-w-lg text-xs text-red-400"
+        >
+          {error}
+        </p>
+      )}
       <input
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
@@ -127,7 +184,7 @@ function TopBar({
 
       <span className="text-sm text-slate-400">{wordCount} words</span>
 
-      <Button onClick={onSave} disabled={false} className=" hover:bg-gray-400">
+      <Button onClick={onSave} disabled={!canSave} className=" hover:bg-gray-400">
         <Save className="h-4 w-4" />
         Save
       </Button>

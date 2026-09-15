@@ -94,7 +94,7 @@ export function ApiKeyGate() {
           type="password"
           value={inputValue}
           onChange={(event) => setInputValue(event.target.value)}
-          placeholder="gsk_..."
+          placeholder="sk-or-v1-..."
           disabled={saving}
           className="mb-2 rounded-md border border-app-border bg-black/10 px-2 py-1.5 text-sm outline-none focus:border-indigo-400"
         />

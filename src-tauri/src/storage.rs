@@ -103,10 +103,17 @@ pub fn remove_reading(app: AppHandle, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn save_writing(app: AppHandle, title: String, content: String, question: String, ai_critics: Option<String>) -> Result<String, String> {
-    let id = Uuid::new_v4().to_string();
-    let markdown = format!("---\nid: {id}\ntitle: {title}\ncreatedAt: {}\n---\n\n## Prompt\n\n{}\n\n## Content\n{}\n\n## AI Critique\n{}\n", Utc::now().to_rfc3339(), question.trim(), content, ai_critics.unwrap_or_default());
-    fs::write(directory(&app, "writings")?.join(format!("{id}.md")), markdown).map_err(|error| error.to_string())?;
+pub fn save_writing(app: AppHandle, id: Option<String>, title: String, content: String, question: String, ai_critics: Option<String>) -> Result<String, String> {
+    let directory = directory(&app, "writings")?;
+    let (id, created_at) = match id {
+        Some(id) if valid_id(&id) && directory.join(format!("{id}.md")).exists() => {
+            let existing = fs::read_to_string(directory.join(format!("{id}.md"))).map_err(|error| error.to_string())?;
+            (id, frontmatter_value(&existing, "createdAt"))
+        }
+        _ => (Uuid::new_v4().to_string(), Utc::now().to_rfc3339()),
+    };
+    let markdown = format!("---\nid: {id}\ntitle: {title}\ncreatedAt: {created_at}\n---\n\n## Prompt\n\n{}\n\n## Content\n{}\n\n## AI Critique\n{}\n", question.trim(), content, ai_critics.unwrap_or_default());
+    fs::write(directory.join(format!("{id}.md")), markdown).map_err(|error| error.to_string())?;
     Ok(id)
 }
 
