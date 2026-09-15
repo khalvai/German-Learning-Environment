@@ -2,7 +2,7 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-app-border:rgb(100, 100, 101);
+  --color-app-border: rgb(100, 100, 101);
 }
 
 :root {

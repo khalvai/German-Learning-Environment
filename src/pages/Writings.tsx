@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  getWritings,
-  removeWriting,
-  Writing,
-} from "../services/writing.repository";
+import { getWritings, removeWriting, type Writing } from "../desktop";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Trash } from "lucide-react";
+import { Trash } from "lucide-react";
+import ContentLibrary from "../components/ContentLibrary";
 
 function WritingCard({
   writing,
@@ -22,6 +19,7 @@ function WritingCard({
           e.stopPropagation();
           await onRemove();
         }}
+        aria-label={`Delete ${writing.title}`}
         className="absolute top-3 right-3 invisible group-hover:visible text-gray-500 hover:text-red-500 transition"
       >
         <Trash className="w-4 h-4" />
@@ -49,42 +47,39 @@ function WritingCard({
 
 export default function Writings() {
   const [writings, setWritings] = useState<Writing[]>([]);
-  const navigate = useNavigate(); // ← Must be inside the component
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    getWritings().then(setWritings);
+    getWritings()
+      .then(setWritings)
+      .catch(() => setError("Could not load your writings."))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div>
-      <nav className="h-16 px-6 flex items-center justify-between border-b border-app-border">
-        <h1 className="text-2xl font-bold">My Writings</h1>
-      </nav>
-
-      <div className="p-6">
-        <div className="grid grid-cols-[repeat(auto-fit,195px)] justify-center gap-4">
-          {/* Add new button */}
-          <div
-            onClick={() => navigate("/writings/new")}
-            className="flex flex-col justify-center items-center p-4 h-[260px] w-[195px] border app-card rounded-lg cursor-pointer hover:bg-white/5 transition"
-          >
-            <Plus className="h-12 w-12" />
-          </div>
-
-          {writings.map((writing) => (
+    <ContentLibrary
+      title="My Writings"
+      itemLabel="writing"
+      loading={loading}
+      error={error}
+      onCreate={() => navigate("/writings/new")}
+    >
+      {writings.map((writing) => (
             <WritingCard
               key={writing.id}
               writing={writing}
               onRemove={async () => {
-                await removeWriting(writing.id);
-                setWritings((prev) =>
-                  prev.filter((item) => item.id !== writing.id),
-                );
+                try {
+                  await removeWriting(writing.id);
+                  setWritings((prev) => prev.filter((item) => item.id !== writing.id));
+                } catch {
+                  setError(`Could not delete “${writing.title}”.`);
+                }
               }}
             />
-          ))}
-        </div>
-      </div>
-    </div>
+      ))}
+    </ContentLibrary>
   );
 }

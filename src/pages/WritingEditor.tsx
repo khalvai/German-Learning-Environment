@@ -1,11 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Save, Sparkles } from "lucide-react";
-import { saveWriting, getWriting } from "../services/writing.repository";
+import { saveWriting, getWriting, analyzeWriting, type WritingAnalysisResponse } from "../desktop";
 import { useParams } from "react-router-dom";
-import {
-  analyzeWriting,
-  WritingAnalysisResponse,
-} from "../services/ai-integration";
 import Button from "../components/Button";
 
 type Mode = "writing" | "dictation";
@@ -19,7 +15,6 @@ export default function WritingEditor() {
   );
   const [mode, setMode] = useState<Mode>("writing");
   const [analyzing, setAnalyzing] = useState(false);
-
   const wordCount = useMemo(
     () => (text.trim() ? text.trim().split(/\s+/).length : 0),
     [text],
@@ -38,6 +33,7 @@ export default function WritingEditor() {
         setAnalysis(writing.AICritics ? JSON.parse(writing.AICritics) : null);
       }
     }
+
     loadWriting();
   }, [id]);
 
@@ -48,7 +44,7 @@ export default function WritingEditor() {
   const handleAnalyze = async () => {
     setAnalyzing(true);
     try {
-      const result = await analyzeWriting(text);
+      const result = await analyzeWriting(text, question);
       setAnalysis(result);
       setMode("dictation");
     } finally {

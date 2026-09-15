@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import GermanWordLookup from "../components/GermanWordLookup";
 import { useParams } from "react-router-dom";
-import { getReading, Reading } from "../services/reading.repository";
+import { getReading, type Reading } from "../desktop";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, Languages } from "lucide-react";

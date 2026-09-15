@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { saveReading } from "../services/reading.repository";
+import { saveReading } from "../desktop";
 import Button from "../components/Button";
 import { Save } from "lucide-react";
 
@@ -11,22 +11,24 @@ export default function NewReading() {
   const [originalText, setOriginalText] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!title.trim() || !originalText.trim()) {
-      alert("Title and German text are required");
+      setError("A title and German text are required.");
       return;
     }
 
     setSaving(true);
+    setError(null);
 
     try {
-      const id = await saveReading(title, originalText);
+      const id = await saveReading(title.trim(), originalText.trim());
 
       navigate(`/reading/${id}`);
-    } catch (error) {
-      console.error("Failed to save reading:", error);
-      alert("Failed to save reading");
+    } catch {
+      setError("Could not save the reading. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -34,37 +36,43 @@ export default function NewReading() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <nav className="h-16 px-6 flex items-center justify-between border-b border-app-border">
         <h1 className="text-2xl font-bold">New Reading</h1>
       </nav>
 
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-6 space-y-6">
-        <label className="block text-sm text-gray-400 mb-1">Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Ein Tag in Berlin"
-          className="w-full bg-transparent border border-app-border rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary"
-          required
-        />
+      <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6 p-6">
+        {error && <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p>}
 
-        <textarea
-          value={originalText}
-          onChange={(e) => setOriginalText(e.target.value)}
-          placeholder="Paste the text here..."
-          rows={8}
-          className="w-full bg-transparent border border-app-border rounded-lg px-4 py-3 focus:outline-none focus:border-primary resize-y"
-          required
-        />
+        <div>
+          <label htmlFor="reading-title" className="mb-1 block text-sm text-gray-400">Title</label>
+          <input
+            id="reading-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Ein Tag in Berlin"
+            className="w-full rounded-lg border border-app-border bg-transparent px-4 py-2.5 focus:outline-none focus:border-indigo-400"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="reading-text" className="mb-1 block text-sm text-gray-400">German text</label>
+          <textarea
+            id="reading-text"
+            value={originalText}
+            onChange={(e) => setOriginalText(e.target.value)}
+            placeholder="Paste the text here..."
+            rows={12}
+            className="w-full resize-y rounded-lg border border-app-border bg-transparent px-4 py-3 focus:outline-none focus:border-indigo-400"
+            required
+          />
+        </div>
 
         <div className="flex items-center justify-end gap-3 pt-4">
           <Button
             disabled={saving}
-            onClick={async () => {
-              await handleSubmit();
-            }}
+            type="submit"
             className=""
           >
             <Save className="h-4 w-4" />

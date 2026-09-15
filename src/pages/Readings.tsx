@@ -1,8 +1,9 @@
-import { Plus, Trash } from "lucide-react";
-import { getReadings, removeReading } from "../services/reading.repository";
-import type { Reading } from "../services/reading.repository";
+import { Trash } from "lucide-react";
+import { getReadings, removeReading } from "../desktop";
+import type { Reading } from "../desktop";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import ContentLibrary from "../components/ContentLibrary";
 
 function ReadingCard({
   reading,
@@ -19,7 +20,8 @@ function ReadingCard({
           e.stopPropagation();
           await onRemove();
         }}
-        className="invisible group-hover:visible text-gray-500 hover:text-red-500 transition ml-auto "
+        aria-label={`Delete ${reading.title}`}
+        className="ml-auto invisible text-gray-500 transition hover:text-red-500 group-hover:visible"
       >
         <Trash className="w-4 h-4" />
       </button>
@@ -47,48 +49,40 @@ function ReadingCard({
 export default function Reading() {
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     getReadings()
       .then(setReadings)
+      .catch(() => setError("Could not load your readings."))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <div className="p-10">Loading readings...</div>;
-  }
-
   return (
-    <div>
-      <nav className="h-16 px-6 flex items-center justify-between border-b border-app-border">
-        <h1 className="text-2xl font-bold">Readings</h1>
-      </nav>
-
-      <div className="p-6">
-        <div className="grid grid-cols-[repeat(auto-fit,195px)] justify-center gap-4">
-          {/* Add new reading */}
-          <div
-            onClick={() => navigate("/reading/new")}
-            className="flex flex-col justify-center items-center p-4 h-[260px] w-[195px] border app-card rounded-lg cursor-pointer hover:bg-white/5 transition"
-          >
-            <Plus className="h-12 w-12" />
-          </div>
-
-          {readings.map((reading) => (
-            <ReadingCard
-              key={reading.id}
-              reading={reading}
-              onRemove={async () => {
-                await removeReading(reading.id);
-                setReadings((prev) =>
-                  prev.filter((item) => item.id !== reading.id),
-                );
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+    <ContentLibrary
+      title="Readings"
+      itemLabel="reading"
+      loading={loading}
+      error={error}
+      onCreate={() => navigate("/reading/new")}
+    >
+      {readings.map((reading) => (
+        <ReadingCard
+          key={reading.id}
+          reading={reading}
+          onRemove={async () => {
+            try {
+              await removeReading(reading.id);
+              setReadings((prev) =>
+                prev.filter((item) => item.id !== reading.id),
+              );
+            } catch {
+              setError(`Could not delete “${reading.title}”.`);
+            }
+          }}
+        />
+      ))}
+    </ContentLibrary>
   );
 }

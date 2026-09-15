@@ -2,13 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   Loader2,
-  Search,
   Sparkles,
   Volume2,
-  X,
-  XIcon,
 } from "lucide-react";
-import { explainWord, ExplanationResponse } from "../services/ai-integration";
+import { explainWord, type ExplanationResponse } from "../desktop";
 
 /**
  * GermanWordLookup
@@ -388,7 +385,6 @@ export default function GermanWordLookup({
     setInput(selectedWord);
   }, [selectedWord]);
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
 
@@ -401,15 +397,12 @@ export default function GermanWordLookup({
   const lookup = useCallback(async (rawWord: string) => {
     const word = rawWord.trim();
     if (!word) return;
-    setLoading(true);
     setError(null);
     setResult(null);
     try {
       setResult(await fetchWiktionaryData(word));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
