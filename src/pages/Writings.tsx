@@ -3,13 +3,13 @@ import {
   getWritings,
   removeWriting,
   getCommonMistakes,
-  analyzeCommonMistakes,
   type Writing,
   type CommonMistake,
 } from "../desktop";
 import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw, Trash } from "lucide-react";
 import ContentLibrary from "../components/ContentLibrary";
+import MistakeSummaryCard from "../components/MistakeSummaryCard";
 
 function WritingCard({
   writing,
@@ -52,52 +52,46 @@ function WritingCard({
   );
 }
 
+const MAX_CATEGORIES_IN_SUMMARY = 4;
+
 function CommonMistakesSection({
   mistakes,
-  loading,
-  error,
+  refreshing,
   onRefresh,
 }: {
-  mistakes: CommonMistake[] | null;
-  loading: boolean;
-  error: string | null;
+  mistakes: CommonMistake[];
+  refreshing: boolean;
   onRefresh: () => void;
 }) {
   return (
     <div className="mb-8 rounded-xl border border-app-border bg-white/5 p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Most Common Mistakes</h2>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          aria-label="Refresh most common mistakes"
-          className="flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-200 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Analyzing…" : "Refresh"}
-        </button>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/writings/mistakes"
+            className="text-xs text-slate-400 transition hover:text-slate-200"
+          >
+            Review all mistakes →
+          </Link>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label="Refresh most common mistakes"
+            className="flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-200 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {error ? (
-        <p className="text-sm text-red-300">{error}</p>
-      ) : loading && !mistakes ? (
-        <p className="text-sm text-slate-400">Looking for patterns across your writings…</p>
-      ) : mistakes && mistakes.length === 0 ? (
-        <p className="text-sm text-slate-400">No recurring mistakes found yet — nice work.</p>
-      ) : mistakes ? (
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
-          {mistakes.map((mistake, index) => (
-            <div
-              key={index}
-              className="rounded-lg border border-app-border bg-[rgb(57,57,58)] p-4"
-            >
-              <h3 className="mb-1.5 text-sm font-medium">{mistake.title}</h3>
-              <p className="text-xs leading-5 text-slate-400">{mistake.description}</p>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        {mistakes.slice(0, MAX_CATEGORIES_IN_SUMMARY).map((mistake) => (
+          <MistakeSummaryCard key={mistake.slug} mistake={mistake} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -106,9 +100,8 @@ export default function Writings() {
   const [writings, setWritings] = useState<Writing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [commonMistakes, setCommonMistakes] = useState<CommonMistake[] | null>(null);
-  const [mistakesLoading, setMistakesLoading] = useState(false);
-  const [mistakesError, setMistakesError] = useState<string | null>(null);
+  const [commonMistakes, setCommonMistakes] = useState<CommonMistake[]>([]);
+  const [mistakesLoading, setMistakesLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -118,39 +111,20 @@ export default function Writings() {
       .finally(() => setLoading(false));
   }, []);
 
-  const hasAnalyzedWriting = writings.some((writing) => writing.aiCritics);
-
-  const runCommonMistakesAnalysis = useCallback(async () => {
+  const loadCommonMistakes = useCallback(async () => {
     setMistakesLoading(true);
-    setMistakesError(null);
     try {
-      const result = await analyzeCommonMistakes();
-      setCommonMistakes(result.mistakes);
-    } catch (error) {
-      setMistakesError(
-        typeof error === "string" ? error : "Could not analyze your writings for common mistakes.",
-      );
+      setCommonMistakes(await getCommonMistakes());
+    } catch {
+      // Common mistakes are a bonus insight, not critical — fail quietly and keep the last known list.
     } finally {
       setMistakesLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (loading || !hasAnalyzedWriting) return;
-    let cancelled = false;
-    getCommonMistakes()
-      .then((cached) => {
-        if (cancelled) return;
-        if (cached) setCommonMistakes(cached.mistakes);
-        else runCommonMistakesAnalysis();
-      })
-      .catch(() => {
-        if (!cancelled) runCommonMistakesAnalysis();
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, hasAnalyzedWriting, runCommonMistakesAnalysis]);
+    loadCommonMistakes();
+  }, [loadCommonMistakes]);
 
   return (
     <ContentLibrary
@@ -160,12 +134,11 @@ export default function Writings() {
       error={error}
       onCreate={() => navigate("/writings/new")}
       beforeContent={
-        hasAnalyzedWriting ? (
+        commonMistakes.length > 0 ? (
           <CommonMistakesSection
             mistakes={commonMistakes}
-            loading={mistakesLoading}
-            error={mistakesError}
-            onRefresh={runCommonMistakesAnalysis}
+            refreshing={mistakesLoading}
+            onRefresh={loadCommonMistakes}
           />
         ) : undefined
       }

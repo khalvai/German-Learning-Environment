@@ -19,23 +19,53 @@ export interface Writing {
   aiCritics?: string;
 }
 
+export type MistakeCategory =
+  | "word_order"
+  | "case_agreement"
+  | "prepositions"
+  | "sentence_complexity"
+  | "cohesion_connectors"
+  | "vocabulary_idiom"
+  | "register_formality"
+  | "structure_organization"
+  | "spelling_punctuation";
+
+export const MISTAKE_CATEGORY_LABELS: Record<MistakeCategory, string> = {
+  word_order: "Word Order",
+  case_agreement: "Case & Article Agreement",
+  prepositions: "Prepositions",
+  sentence_complexity: "Sentence Complexity",
+  cohesion_connectors: "Cohesion & Connectors",
+  vocabulary_idiom: "Vocabulary & Idiomatic Usage",
+  register_formality: "Register & Formality",
+  structure_organization: "Structure & Organization",
+  spelling_punctuation: "Spelling & Punctuation",
+};
+
 export interface WritingAnalysisResponse {
   overallFeedback: string;
   strengths: string[];
-  grammarMistakes: { original: string; correction: string; explanation: string }[];
-  vocabularyFeedback: { original: string; suggestion: string; explanation: string }[];
-  sentenceStructureFeedback: { original: string; suggestion: string; explanation: string }[];
+  grammarMistakes: { original: string; correction: string; explanation: string; category: MistakeCategory }[];
+  vocabularyFeedback: { original: string; suggestion: string; explanation: string; category: MistakeCategory }[];
+  sentenceStructureFeedback: { original: string; suggestion: string; explanation: string; category: MistakeCategory }[];
   improvedText: string;
   score: { grammar: number; vocabulary: number; sentenceStructure: number; overall: number };
 }
 
-export interface CommonMistake {
-  title: string;
-  description: string;
+export interface CommonMistakeExample {
+  original: string;
+  fix: string;
+  explanation: string;
+  writingId: string;
+  writingTitle: string;
 }
 
-export interface CommonMistakesResponse {
-  mistakes: CommonMistake[];
+export interface CommonMistake {
+  slug: MistakeCategory;
+  title: string;
+  description: string;
+  count: number;
+  examples: CommonMistakeExample[];
 }
 
 export interface ExplanationResponse {
@@ -61,7 +91,6 @@ export function saveWriting(id: string | undefined, title: string, content: stri
 export function removeWriting(id: string) { return invoke("remove_writing", { id }); }
 
 export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }
-export function getCommonMistakes() { return invoke<CommonMistakesResponse | null>("get_common_mistakes"); }
-export function analyzeCommonMistakes() { return invoke<CommonMistakesResponse>("analyze_common_mistakes"); }
+export function getCommonMistakes() { return invoke<CommonMistake[]>("get_common_mistakes"); }
 export function explainWord(word: string, contextSentence: string | null) { return invoke<ExplanationResponse>("explain_word", { word, contextSentence }); }
 export function addWordToAnki(word: string, contextSentence?: string) { return invoke("add_word_to_anki", { word, contextSentence }); }

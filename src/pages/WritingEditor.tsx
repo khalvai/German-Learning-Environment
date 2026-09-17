@@ -1,6 +1,13 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Save, Sparkles } from "lucide-react";
-import { saveWriting, getWriting, analyzeWriting, type WritingAnalysisResponse } from "../desktop";
+import {
+  saveWriting,
+  getWriting,
+  analyzeWriting,
+  MISTAKE_CATEGORY_LABELS,
+  type WritingAnalysisResponse,
+  type MistakeCategory,
+} from "../desktop";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
 
@@ -432,11 +439,7 @@ function AnalysisPanel({ analysis }: { analysis: WritingAnalysisResponse }) {
       {analysis.grammarMistakes.length > 0 && (
         <FeedbackSection
           title="Grammar mistakes"
-          items={analysis.grammarMistakes.map((mistake) => ({
-            original: mistake.original,
-            correction: mistake.correction,
-            explanation: mistake.explanation,
-          }))}
+          items={analysis.grammarMistakes}
           type="grammar"
         />
       )}
@@ -480,6 +483,7 @@ function FeedbackSection({
     correction?: string;
     suggestion?: string;
     explanation: string;
+    category: MistakeCategory;
   }[];
   type: "grammar" | "suggestion";
 }) {
@@ -490,6 +494,9 @@ function FeedbackSection({
         {items.map((item, index) => (
           <div key={index} className="rounded-md border border-zinc-800  p-4">
             <div className="space-y-2 text-sm">
+              <span className="inline-block rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] text-zinc-400">
+                {MISTAKE_CATEGORY_LABELS[item.category]}
+              </span>
               <div>
                 <span className="text-xs text-zinc-500">
                   {type === "grammar" ? "Your sentence" : "Original"}

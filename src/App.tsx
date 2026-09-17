@@ -8,6 +8,8 @@ import Grammar from "./pages/Grammar";
 import ReadingDetail from "./pages/ReadingDetail";
 import WritingEditor from "./pages/WritingEditor";
 import Writings from "./pages/Writings";
+import MistakesIndex from "./pages/MistakesIndex";
+import MistakeReview from "./pages/MistakeReview";
 import Readings from "./pages/Readings";
 import NewReading from "./pages/NewReading";
 
@@ -26,6 +28,8 @@ function App() {
         <Route path="/grammar" element={<Grammar />} />
 
         <Route path="/writings" element={<Writings />} />
+        <Route path="/writings/mistakes" element={<MistakesIndex />} />
+        <Route path="/writings/mistakes/:slug" element={<MistakeReview />} />
         <Route path="/writings/new" element={<WritingEditor />} />
         <Route path="/writings/:id" element={<WritingEditor />} />
       </Routes>
