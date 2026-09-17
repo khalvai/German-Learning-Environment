@@ -47,15 +47,15 @@ export default function WritingEditor() {
         setTitle(writing.title);
         setText(writing.content);
         setQuestion(writing.question);
-        const loadedAnalysis = writing.AICritics
-          ? JSON.parse(writing.AICritics)
+        const loadedAnalysis = writing.aiCritics
+          ? JSON.parse(writing.aiCritics)
           : null;
         setAnalysis(loadedAnalysis);
         setSaved({
           title: writing.title,
           text: writing.content,
           question: writing.question,
-          analysisJson: writing.AICritics ?? null,
+          analysisJson: writing.aiCritics ?? null,
         });
       }
     }

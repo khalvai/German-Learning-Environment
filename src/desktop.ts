@@ -16,7 +16,7 @@ export interface Writing {
   content: string;
   question: string;
   createdAt: Date;
-  AICritics?: string;
+  aiCritics?: string;
 }
 
 export interface WritingAnalysisResponse {
@@ -27,6 +27,15 @@ export interface WritingAnalysisResponse {
   sentenceStructureFeedback: { original: string; suggestion: string; explanation: string }[];
   improvedText: string;
   score: { grammar: number; vocabulary: number; sentenceStructure: number; overall: number };
+}
+
+export interface CommonMistake {
+  title: string;
+  description: string;
+}
+
+export interface CommonMistakesResponse {
+  mistakes: CommonMistake[];
 }
 
 export interface ExplanationResponse {
@@ -52,5 +61,7 @@ export function saveWriting(id: string | undefined, title: string, content: stri
 export function removeWriting(id: string) { return invoke("remove_writing", { id }); }
 
 export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }
+export function getCommonMistakes() { return invoke<CommonMistakesResponse | null>("get_common_mistakes"); }
+export function analyzeCommonMistakes() { return invoke<CommonMistakesResponse>("analyze_common_mistakes"); }
 export function explainWord(word: string, contextSentence: string | null) { return invoke<ExplanationResponse>("explain_word", { word, contextSentence }); }
 export function addWordToAnki(word: string, contextSentence?: string) { return invoke("add_word_to_anki", { word, contextSentence }); }

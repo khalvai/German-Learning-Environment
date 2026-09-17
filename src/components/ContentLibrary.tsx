@@ -7,6 +7,7 @@ type ContentLibraryProps = {
   loading?: boolean;
   error?: string | null;
   onCreate: () => void;
+  beforeContent?: ReactNode;
   children: ReactNode;
 };
 
@@ -17,6 +18,7 @@ export default function ContentLibrary({
   loading = false,
   error,
   onCreate,
+  beforeContent,
   children,
 }: ContentLibraryProps) {
   return (
@@ -31,6 +33,8 @@ export default function ContentLibrary({
             {error}
           </p>
         )}
+
+        {!loading && beforeContent}
 
         {loading ? (
           <p className="p-4 text-slate-400">Loading {itemLabel}s…</p>

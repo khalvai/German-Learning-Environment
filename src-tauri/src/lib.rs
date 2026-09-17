@@ -1,4 +1,5 @@
 use keyring::Entry;
+use tauri::AppHandle;
 
 mod storage;
 
@@ -109,6 +110,42 @@ async fn analyze_writing(content: String, question: String) -> Result<serde_json
 }
 
 #[tauri::command]
+async fn analyze_common_mistakes(app: AppHandle) -> Result<serde_json::Value, String> {
+    let writings = storage::get_writings(app.clone())?;
+    let analyzed: Vec<&storage::Writing> = writings.iter().filter(|writing| writing.ai_critics.is_some()).collect();
+    if analyzed.is_empty() {
+        return Err("Analyze a few writings first to see your most common mistakes.".into());
+    }
+
+    let mut mistakes_text = String::new();
+    for writing in &analyzed {
+        let Some(critics) = &writing.ai_critics else { continue };
+        let Ok(parsed) = serde_json::from_str::<serde_json::Value>(critics) else { continue };
+        for category in ["grammarMistakes", "vocabularyFeedback", "sentenceStructureFeedback"] {
+            let Some(items) = parsed[category].as_array() else { continue };
+            for item in items {
+                let explanation = item["explanation"].as_str().unwrap_or_default();
+                let original = item["original"].as_str().unwrap_or_default();
+                if explanation.is_empty() { continue; }
+                mistakes_text.push_str(&format!("- [{category}] \"{original}\" -> {explanation}\n"));
+            }
+        }
+    }
+    if mistakes_text.is_empty() {
+        return Err("Analyze a few writings first to see your most common mistakes.".into());
+    }
+
+    let mistakes = openrouter_json(
+        "You are a German teacher for an A2 learner. You will be given a list of grammar, vocabulary, and sentence-structure mistakes collected from a student's past writings. Find the most common recurring mistake PATTERNS by grouping similar mistakes together, ignoring one-off issues. Return valid JSON only with: mistakes ({title, description}[]), at most 4 items, ordered from most to least common. title is a short 2-4 word label (e.g. 'Cohesion', 'Verb Tense Usage', 'Wrong conditional usage'). description is 1-2 encouraging sentences in simple English explaining the pattern and how to improve.",
+        format!("Mistakes collected from past writings:\n{mistakes_text}"),
+    )
+    .await?;
+
+    storage::save_common_mistakes(&app, &writings, mistakes.clone())?;
+    Ok(mistakes)
+}
+
+#[tauri::command]
 async fn explain_word(word: String, context_sentence: Option<String>) -> Result<serde_json::Value, String> {
     if word.trim().is_empty() {
         return Err("The word cannot be empty.".into());
@@ -163,7 +200,9 @@ pub fn run() {
             storage::get_writings,
             storage::get_writing,
             storage::remove_writing,
+            storage::get_common_mistakes,
             analyze_writing,
+            analyze_common_mistakes,
             explain_word,
             add_word_to_anki
         ])

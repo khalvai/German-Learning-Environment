@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
@@ -17,12 +17,12 @@ pub struct Reading {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Writing {
-    id: String,
+    pub(crate) id: String,
     title: String,
     content: String,
     question: String,
     created_at: String,
-    ai_critics: Option<String>,
+    pub(crate) ai_critics: Option<String>,
 }
 
 fn directory(app: &AppHandle, name: &str) -> Result<PathBuf, String> {
@@ -142,4 +142,40 @@ pub fn get_writing(app: AppHandle, id: String) -> Result<Option<Writing>, String
 pub fn remove_writing(app: AppHandle, id: String) -> Result<(), String> {
     if !valid_id(&id) { return Err("Invalid writing id.".into()); }
     fs::remove_file(directory(&app, "writings")?.join(format!("{id}.md"))).map_err(|error| error.to_string())
+}
+
+#[derive(Serialize, Deserialize)]
+struct CommonMistakesCache {
+    signature: String,
+    mistakes: serde_json::Value,
+}
+
+fn common_mistakes_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(directory(app, "insights")?.join("common-mistakes.json"))
+}
+
+/// A signature of which writings (and in what order) fed the common-mistakes
+/// analysis, so a cached result can be invalidated once new writings are analyzed.
+fn writings_signature(writings: &[Writing]) -> String {
+    writings.iter().filter(|writing| writing.ai_critics.is_some()).map(|writing| writing.id.as_str()).collect::<Vec<_>>().join(",")
+}
+
+pub fn save_common_mistakes(app: &AppHandle, writings: &[Writing], mistakes: serde_json::Value) -> Result<(), String> {
+    let cache = CommonMistakesCache { signature: writings_signature(writings), mistakes };
+    let json = serde_json::to_string(&cache).map_err(|error| error.to_string())?;
+    fs::write(common_mistakes_path(app)?, json).map_err(|error| error.to_string())
+}
+
+/// Returns the cached common-mistakes analysis, or `None` if there isn't one
+/// yet or it was computed from a different set of analyzed writings.
+#[tauri::command]
+pub fn get_common_mistakes(app: AppHandle) -> Result<Option<serde_json::Value>, String> {
+    let cached = match fs::read_to_string(common_mistakes_path(&app)?) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    let cache: CommonMistakesCache = serde_json::from_str(&cached).map_err(|error| error.to_string())?;
+    let writings = get_writings(app)?;
+    Ok((cache.signature == writings_signature(&writings)).then_some(cache.mistakes))
 }
