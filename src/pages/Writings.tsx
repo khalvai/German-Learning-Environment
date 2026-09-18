@@ -132,7 +132,7 @@ export default function Writings() {
       itemLabel="writing"
       loading={loading}
       error={error}
-      onCreate={() => navigate("/writings/new")}
+      onCreate={() => navigate("/writings/topics")}
       beforeContent={
         commonMistakes.length > 0 ? (
           <CommonMistakesSection

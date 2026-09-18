@@ -1,14 +1,15 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { Save, Sparkles } from "lucide-react";
+import { Save, Sparkles, Flag, Timer } from "lucide-react";
 import {
   saveWriting,
   getWriting,
+  getTopic,
   analyzeWriting,
   MISTAKE_CATEGORY_LABELS,
   type WritingAnalysisResponse,
   type MistakeCategory,
 } from "../desktop";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 
 type Mode = "writing" | "dictation";
@@ -19,6 +20,12 @@ type Snapshot = {
   question: string;
   analysisJson: string | null;
 };
+
+function formatDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
 
 export default function WritingEditor() {
   const [title, setTitle] = useState("");
@@ -31,6 +38,8 @@ export default function WritingEditor() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [writingId, setWritingId] = useState<string | undefined>(undefined);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [finished, setFinished] = useState(false);
   const [saved, setSaved] = useState<Snapshot>({
     title: "",
     text: "",
@@ -44,6 +53,21 @@ export default function WritingEditor() {
 
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const topicId = searchParams.get("topic");
+
+  useEffect(() => {
+    if (id || !topicId) return;
+    async function loadTopic() {
+      const topic = await getTopic(topicId!);
+      if (topic) {
+        setTitle(topic.title);
+        setQuestion(topic.question);
+      }
+    }
+
+    loadTopic();
+  }, [id, topicId]);
 
   useEffect(() => {
     setWritingId(id);
@@ -58,6 +82,8 @@ export default function WritingEditor() {
           ? JSON.parse(writing.aiCritics)
           : null;
         setAnalysis(loadedAnalysis);
+        setElapsedSeconds(writing.durationSeconds);
+        setFinished(writing.finished);
         setSaved({
           title: writing.title,
           text: writing.content,
@@ -70,6 +96,12 @@ export default function WritingEditor() {
     loadWriting();
   }, [id]);
 
+  useEffect(() => {
+    if (finished) return;
+    const interval = setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1000);
+    return () => clearInterval(interval);
+  }, [finished]);
+
   const analysisJson = analysis ? JSON.stringify(analysis) : null;
   const isDirty =
     title !== saved.title ||
@@ -78,7 +110,17 @@ export default function WritingEditor() {
     analysisJson !== saved.analysisJson;
 
   const handleSave = async () => {
-    const newId = await saveWriting(writingId, title, text, question, analysisJson ?? undefined);
+    const newId = await saveWriting(writingId, title, text, question, analysisJson ?? undefined, elapsedSeconds, finished);
+    setSaved({ title, text, question, analysisJson });
+    if (!writingId) {
+      setWritingId(newId);
+      navigate(`/writings/${newId}`, { replace: true });
+    }
+  };
+
+  const handleFinish = async () => {
+    setFinished(true);
+    const newId = await saveWriting(writingId, title, text, question, analysisJson ?? undefined, elapsedSeconds, true);
     setSaved({ title, text, question, analysisJson });
     if (!writingId) {
       setWritingId(newId);
@@ -117,6 +159,10 @@ export default function WritingEditor() {
         analyzing={analyzing}
         canAnalyze={!!text.trim()}
         error={analyzeError}
+        elapsedSeconds={elapsedSeconds}
+        finished={finished}
+        onFinish={handleFinish}
+        canFinish={!!text.trim()}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -126,6 +172,7 @@ export default function WritingEditor() {
             onTextChange={setText}
             question={question}
             onQuestionChange={setQuestion}
+            disabled={finished}
           />
         ) : (
           <DictationMode text={text} analysis={analysis} />
@@ -152,6 +199,10 @@ function TopBar({
   analyzing,
   canAnalyze,
   error,
+  elapsedSeconds,
+  finished,
+  onFinish,
+  canFinish,
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -165,6 +216,10 @@ function TopBar({
   analyzing: boolean;
   canAnalyze: boolean;
   error: string | null;
+  elapsedSeconds: number;
+  finished: boolean;
+  onFinish: () => void;
+  canFinish: boolean;
 }) {
   return (
     <header className="relative flex items-center gap-4 border-b border-app-border px-6 py-4">
@@ -190,6 +245,29 @@ function TopBar({
       />
 
       <span className="text-sm text-slate-400">{wordCount} words</span>
+
+      <span
+        className={`flex items-center gap-1.5 text-sm tabular-nums ${finished ? "text-slate-500" : "text-slate-300"}`}
+      >
+        <Timer className="h-4 w-4" />
+        {formatDuration(elapsedSeconds)}
+      </span>
+
+      {finished ? (
+        <span className="flex h-11 items-center gap-2 rounded-lg border border-emerald-500/40 px-4 text-sm font-medium text-emerald-400">
+          <Flag className="h-4 w-4" />
+          Finished
+        </span>
+      ) : (
+        <button
+          onClick={onFinish}
+          disabled={!canFinish}
+          className="flex h-11 items-center gap-2 rounded-lg border border-app-border px-4 text-sm font-medium disabled:opacity-50"
+        >
+          <Flag className="h-4 w-4" />
+          Finish
+        </button>
+      )}
 
       <Button onClick={onSave} disabled={!canSave} className=" hover:bg-gray-400">
         <Save className="h-4 w-4" />
@@ -261,11 +339,13 @@ function WritingMode({
   onTextChange,
   question,
   onQuestionChange,
+  disabled,
 }: {
   text: string;
   onTextChange: (v: string) => void;
   question: string;
   onQuestionChange: (v: string) => void;
+  disabled: boolean;
 }) {
   const [textAreaWidth, setTextAreaWidth] = useState(65);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -319,7 +399,8 @@ function WritingMode({
         onChange={(e) => onTextChange(e.target.value)}
         placeholder="Questions ..."
         spellCheck={false}
-        className=" md:h-full text-lg leading-9 outline-none  resize-none flex-1 p-10 overflow-auto"
+        disabled={disabled}
+        className=" md:h-full text-lg leading-9 outline-none  resize-none flex-1 p-10 overflow-auto disabled:opacity-70 disabled:cursor-not-allowed"
         style={
           isDesktop
             ? { width: `${textAreaWidth}%` }

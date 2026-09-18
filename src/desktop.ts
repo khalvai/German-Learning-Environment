@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 type ReadingPayload = Omit<Reading, "createdAt"> & { createdAt: string };
+type TopicPayload = Omit<Topic, "createdAt"> & { createdAt: string };
 type WritingPayload = Omit<Writing, "createdAt"> & { createdAt: string };
 
 export interface Reading {
@@ -10,6 +11,13 @@ export interface Reading {
   originalText: string;
 }
 
+export interface Topic {
+  id: string;
+  title: string;
+  createdAt: Date;
+  question: string;
+}
+
 export interface Writing {
   id: string;
   title: string;
@@ -17,6 +25,8 @@ export interface Writing {
   question: string;
   createdAt: Date;
   aiCritics?: string;
+  durationSeconds: number;
+  finished: boolean;
 }
 
 export type MistakeCategory =
@@ -78,6 +88,7 @@ export interface ExplanationResponse {
 }
 
 const toReading = (reading: ReadingPayload): Reading => ({ ...reading, createdAt: new Date(reading.createdAt) });
+const toTopic = (topic: TopicPayload): Topic => ({ ...topic, createdAt: new Date(topic.createdAt) });
 const toWriting = (writing: WritingPayload): Writing => ({ ...writing, createdAt: new Date(writing.createdAt) });
 
 export async function getReadings() { return (await invoke<ReadingPayload[]>("get_readings")).map(toReading); }
@@ -85,9 +96,14 @@ export async function getReading(id: string) { const reading = await invoke<Read
 export function saveReading(title: string, originalText: string) { return invoke<string>("save_reading", { title, originalText }); }
 export function removeReading(id: string) { return invoke("remove_reading", { id }); }
 
+export async function getTopics() { return (await invoke<TopicPayload[]>("get_topics")).map(toTopic); }
+export async function getTopic(id: string) { const topic = await invoke<TopicPayload | null>("get_topic", { id }); return topic && toTopic(topic); }
+export function saveTopic(title: string, question: string) { return invoke<string>("save_topic", { title, question }); }
+export function removeTopic(id: string) { return invoke("remove_topic", { id }); }
+
 export async function getWritings() { return (await invoke<WritingPayload[]>("get_writings")).map(toWriting); }
 export async function getWriting(id: string) { const writing = await invoke<WritingPayload | null>("get_writing", { id }); return writing && toWriting(writing); }
-export function saveWriting(id: string | undefined, title: string, content: string, question: string, aiCritics?: string) { return invoke<string>("save_writing", { id, title, content, question, aiCritics }); }
+export function saveWriting(id: string | undefined, title: string, content: string, question: string, aiCritics: string | undefined, durationSeconds: number, finished: boolean) { return invoke<string>("save_writing", { id, title, content, question, aiCritics, durationSeconds, finished }); }
 export function removeWriting(id: string) { return invoke("remove_writing", { id }); }
 
 export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }

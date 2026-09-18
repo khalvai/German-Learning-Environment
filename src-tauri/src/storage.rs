@@ -16,6 +16,15 @@ pub struct Reading {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Topic {
+    id: String,
+    title: String,
+    created_at: String,
+    question: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Writing {
     pub(crate) id: String,
     title: String,
@@ -23,6 +32,8 @@ pub struct Writing {
     question: String,
     created_at: String,
     pub(crate) ai_critics: Option<String>,
+    duration_seconds: u32,
+    finished: bool,
 }
 
 fn directory(app: &AppHandle, name: &str) -> Result<PathBuf, String> {
@@ -55,6 +66,15 @@ fn parse_reading(markdown: String) -> Reading {
     }
 }
 
+fn parse_topic(markdown: String) -> Topic {
+    Topic {
+        id: frontmatter_value(&markdown, "id"),
+        title: frontmatter_value(&markdown, "title"),
+        created_at: frontmatter_value(&markdown, "createdAt"),
+        question: section(&markdown, "Prompt"),
+    }
+}
+
 fn parse_writing(markdown: String) -> Writing {
     let ai_critics = section(&markdown, "AI Critique");
     Writing {
@@ -64,6 +84,8 @@ fn parse_writing(markdown: String) -> Writing {
         question: section(&markdown, "Prompt"),
         created_at: frontmatter_value(&markdown, "createdAt"),
         ai_critics: (!ai_critics.is_empty() && ai_critics != "null").then_some(ai_critics),
+        duration_seconds: frontmatter_value(&markdown, "durationSeconds").parse().unwrap_or(0),
+        finished: frontmatter_value(&markdown, "finished") == "true",
     }
 }
 
@@ -103,7 +125,42 @@ pub fn remove_reading(app: AppHandle, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn save_writing(app: AppHandle, id: Option<String>, title: String, content: String, question: String, ai_critics: Option<String>) -> Result<String, String> {
+pub fn save_topic(app: AppHandle, title: String, question: String) -> Result<String, String> {
+    let id = Uuid::new_v4().to_string();
+    let markdown = format!("---\nid: {id}\ntitle: {title}\ncreatedAt: {}\n---\n\n## Prompt\n\n{}\n", Utc::now().to_rfc3339(), question.trim());
+    fs::write(directory(&app, "topics")?.join(format!("{id}.md")), markdown).map_err(|error| error.to_string())?;
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn get_topics(app: AppHandle) -> Result<Vec<Topic>, String> {
+    let mut items = fs::read_dir(directory(&app, "topics")?).map_err(|error| error.to_string())?
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|extension| extension == "md"))
+        .filter_map(|entry| fs::read_to_string(entry.path()).ok())
+        .map(parse_topic).collect::<Vec<_>>();
+    items.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn get_topic(app: AppHandle, id: String) -> Result<Option<Topic>, String> {
+    if !valid_id(&id) { return Err("Invalid topic id.".into()); }
+    match fs::read_to_string(directory(&app, "topics")?.join(format!("{id}.md"))) {
+        Ok(markdown) => Ok(Some(parse_topic(markdown))),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn remove_topic(app: AppHandle, id: String) -> Result<(), String> {
+    if !valid_id(&id) { return Err("Invalid topic id.".into()); }
+    fs::remove_file(directory(&app, "topics")?.join(format!("{id}.md"))).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn save_writing(app: AppHandle, id: Option<String>, title: String, content: String, question: String, ai_critics: Option<String>, duration_seconds: u32, finished: bool) -> Result<String, String> {
     let directory = directory(&app, "writings")?;
     let (id, created_at) = match id {
         Some(id) if valid_id(&id) && directory.join(format!("{id}.md")).exists() => {
@@ -112,7 +169,7 @@ pub fn save_writing(app: AppHandle, id: Option<String>, title: String, content: 
         }
         _ => (Uuid::new_v4().to_string(), Utc::now().to_rfc3339()),
     };
-    let markdown = format!("---\nid: {id}\ntitle: {title}\ncreatedAt: {created_at}\n---\n\n## Prompt\n\n{}\n\n## Content\n{}\n\n## AI Critique\n{}\n", question.trim(), content, ai_critics.unwrap_or_default());
+    let markdown = format!("---\nid: {id}\ntitle: {title}\ncreatedAt: {created_at}\ndurationSeconds: {duration_seconds}\nfinished: {finished}\n---\n\n## Prompt\n\n{}\n\n## Content\n{}\n\n## AI Critique\n{}\n", question.trim(), content, ai_critics.unwrap_or_default());
     fs::write(directory.join(format!("{id}.md")), markdown).map_err(|error| error.to_string())?;
     Ok(id)
 }
