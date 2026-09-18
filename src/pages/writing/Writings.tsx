@@ -3,13 +3,15 @@ import {
   getWritings,
   removeWriting,
   getCommonMistakes,
+  getRecentMistakes,
   type Writing,
   type CommonMistake,
-} from "../desktop";
+  type RecentMistake,
+} from "../../desktop";
 import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw, Trash } from "lucide-react";
-import ContentLibrary from "../components/ContentLibrary";
-import MistakeSummaryCard from "../components/MistakeSummaryCard";
+import ContentLibrary from "../../components/ContentLibrary";
+import MistakeSummaryCard from "../../components/MistakeSummaryCard";
 
 function WritingCard({
   writing,
@@ -53,6 +55,43 @@ function WritingCard({
 }
 
 const MAX_CATEGORIES_IN_SUMMARY = 4;
+const MAX_RECENT_MISTAKES_IN_SUMMARY = 4;
+
+function RecentMistakeCard({ mistake }: { mistake: RecentMistake }) {
+  return (
+    <Link
+      to={`/writings/mistakes/${mistake.categorySlug}`}
+      className="block rounded-lg border border-app-border bg-[rgb(57,57,58)] p-4 transition hover:bg-[rgb(73,73,74)]"
+    >
+      <h3 className="mb-2 text-sm font-medium">{mistake.categoryTitle}</h3>
+      <p className="text-xs leading-5">
+        <span className="text-red-300 line-through">{mistake.original}</span>
+        {mistake.fix && (
+          <span className="ml-1.5 text-emerald-300">{mistake.fix}</span>
+        )}
+      </p>
+      <p className="mt-2 text-xs leading-5 text-slate-400">
+        {mistake.explanation}
+      </p>
+    </Link>
+  );
+}
+
+function RecentMistakesSection({ mistakes }: { mistakes: RecentMistake[] }) {
+  return (
+    <div className="mb-8 rounded-xl border border-app-border bg-white/5 p-6">
+      <h2 className="mb-4 text-lg font-semibold">Recent Mistakes</h2>
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        {mistakes
+          .slice(0, MAX_RECENT_MISTAKES_IN_SUMMARY)
+          .map((mistake, index) => (
+            <RecentMistakeCard key={index} mistake={mistake} />
+          ))}
+      </div>
+    </div>
+  );
+}
 
 function CommonMistakesSection({
   mistakes,
@@ -64,7 +103,7 @@ function CommonMistakesSection({
   onRefresh: () => void;
 }) {
   return (
-    <div className="mb-8 rounded-xl border border-app-border bg-white/5 p-6">
+    <div className="mt-8 rounded-xl border border-app-border bg-white/5 p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Most Common Mistakes</h2>
         <div className="flex items-center gap-4">
@@ -81,7 +120,9 @@ function CommonMistakesSection({
             aria-label="Refresh most common mistakes"
             className="flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-200 disabled:opacity-50"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </button>
         </div>
@@ -102,6 +143,7 @@ export default function Writings() {
   const [error, setError] = useState<string | null>(null);
   const [commonMistakes, setCommonMistakes] = useState<CommonMistake[]>([]);
   const [mistakesLoading, setMistakesLoading] = useState(true);
+  const [recentMistakes, setRecentMistakes] = useState<RecentMistake[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -126,6 +168,14 @@ export default function Writings() {
     loadCommonMistakes();
   }, [loadCommonMistakes]);
 
+  useEffect(() => {
+    getRecentMistakes()
+      .then(setRecentMistakes)
+      .catch(() => {
+        // Recent mistakes are a bonus insight, not critical — fail quietly.
+      });
+  }, []);
+
   return (
     <ContentLibrary
       title="My Writings"
@@ -134,6 +184,11 @@ export default function Writings() {
       error={error}
       onCreate={() => navigate("/writings/topics")}
       beforeContent={
+        recentMistakes.length > 0 ? (
+          <RecentMistakesSection mistakes={recentMistakes} />
+        ) : undefined
+      }
+      afterContent={
         commonMistakes.length > 0 ? (
           <CommonMistakesSection
             mistakes={commonMistakes}
@@ -144,18 +199,20 @@ export default function Writings() {
       }
     >
       {writings.map((writing) => (
-            <WritingCard
-              key={writing.id}
-              writing={writing}
-              onRemove={async () => {
-                try {
-                  await removeWriting(writing.id);
-                  setWritings((prev) => prev.filter((item) => item.id !== writing.id));
-                } catch {
-                  setError(`Could not delete “${writing.title}”.`);
-                }
-              }}
-            />
+        <WritingCard
+          key={writing.id}
+          writing={writing}
+          onRemove={async () => {
+            try {
+              await removeWriting(writing.id);
+              setWritings((prev) =>
+                prev.filter((item) => item.id !== writing.id),
+              );
+            } catch {
+              setError(`Could not delete “${writing.title}”.`);
+            }
+          }}
+        />
       ))}
     </ContentLibrary>
   );

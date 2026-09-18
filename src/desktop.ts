@@ -78,6 +78,16 @@ export interface CommonMistake {
   examples: CommonMistakeExample[];
 }
 
+export interface RecentMistake {
+  categorySlug: MistakeCategory;
+  categoryTitle: string;
+  original: string;
+  fix: string;
+  explanation: string;
+  writingId: string;
+  writingTitle: string;
+}
+
 export interface ExplanationResponse {
   partOfSpeech: string;
   grammar?: { noun?: { article?: string; singular?: string; plural?: string }; verb?: { infinitive?: string; presentThirdPerson?: string; präteritumThirdPerson?: string; perfectParticiple?: string; perfectAuxiliary?: "haben" | "sein" }; adjective?: { comparative?: string; superlative?: string } };
@@ -108,5 +118,6 @@ export function removeWriting(id: string) { return invoke("remove_writing", { id
 
 export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }
 export function getCommonMistakes() { return invoke<CommonMistake[]>("get_common_mistakes"); }
+export function getRecentMistakes() { return invoke<RecentMistake[]>("get_recent_mistakes"); }
 export function explainWord(word: string, contextSentence: string | null) { return invoke<ExplanationResponse>("explain_word", { word, contextSentence }); }
 export function addWordToAnki(word: string, contextSentence?: string) { return invoke("add_word_to_anki", { word, contextSentence }); }

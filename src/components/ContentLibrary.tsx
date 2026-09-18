@@ -8,6 +8,7 @@ type ContentLibraryProps = {
   error?: string | null;
   onCreate: () => void;
   beforeContent?: ReactNode;
+  afterContent?: ReactNode;
   children: ReactNode;
 };
 
@@ -19,6 +20,7 @@ export default function ContentLibrary({
   error,
   onCreate,
   beforeContent,
+  afterContent,
   children,
 }: ContentLibraryProps) {
   return (
@@ -52,6 +54,8 @@ export default function ContentLibrary({
             {children}
           </div>
         )}
+
+        {!loading && afterContent}
       </section>
     </main>
   );

@@ -8,9 +8,9 @@ import {
   MISTAKE_CATEGORY_LABELS,
   type WritingAnalysisResponse,
   type MistakeCategory,
-} from "../desktop";
+} from "../../desktop";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import Button from "../components/Button";
+import Button from "../../components/Button";
 
 type Mode = "writing" | "dictation";
 
@@ -98,7 +98,10 @@ export default function WritingEditor() {
 
   useEffect(() => {
     if (finished) return;
-    const interval = setInterval(() => setElapsedSeconds((seconds) => seconds + 1), 1000);
+    const interval = setInterval(
+      () => setElapsedSeconds((seconds) => seconds + 1),
+      1000,
+    );
     return () => clearInterval(interval);
   }, [finished]);
 
@@ -110,7 +113,15 @@ export default function WritingEditor() {
     analysisJson !== saved.analysisJson;
 
   const handleSave = async () => {
-    const newId = await saveWriting(writingId, title, text, question, analysisJson ?? undefined, elapsedSeconds, finished);
+    const newId = await saveWriting(
+      writingId,
+      title,
+      text,
+      question,
+      analysisJson ?? undefined,
+      elapsedSeconds,
+      finished,
+    );
     setSaved({ title, text, question, analysisJson });
     if (!writingId) {
       setWritingId(newId);
@@ -120,7 +131,15 @@ export default function WritingEditor() {
 
   const handleFinish = async () => {
     setFinished(true);
-    const newId = await saveWriting(writingId, title, text, question, analysisJson ?? undefined, elapsedSeconds, true);
+    const newId = await saveWriting(
+      writingId,
+      title,
+      text,
+      question,
+      analysisJson ?? undefined,
+      elapsedSeconds,
+      true,
+    );
     setSaved({ title, text, question, analysisJson });
     if (!writingId) {
       setWritingId(newId);
@@ -269,7 +288,11 @@ function TopBar({
         </button>
       )}
 
-      <Button onClick={onSave} disabled={!canSave} className=" hover:bg-gray-400">
+      <Button
+        onClick={onSave}
+        disabled={!canSave}
+        className=" hover:bg-gray-400"
+      >
         <Save className="h-4 w-4" />
         Save
       </Button>

@@ -171,6 +171,7 @@ pub fn run() {
             storage::get_writing,
             storage::remove_writing,
             storage::get_common_mistakes,
+            storage::get_recent_mistakes,
             analyze_writing,
             explain_word,
             add_word_to_anki

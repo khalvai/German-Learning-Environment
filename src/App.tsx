@@ -6,14 +6,14 @@ import Listening from "./pages/Listening";
 import Speaking from "./pages/Speaking";
 import Grammar from "./pages/Grammar";
 import ReadingDetail from "./pages/ReadingDetail";
-import WritingEditor from "./pages/WritingEditor";
-import Writings from "./pages/Writings";
-import MistakesIndex from "./pages/MistakesIndex";
-import MistakeReview from "./pages/MistakeReview";
-import WritingTopics from "./pages/WritingTopics";
+import WritingEditor from "./pages/writing/WritingEditor";
+import Writings from "./pages/writing/Writings";
+import WritingTopics from "./pages/writing/WritingTopics";
 import NewTopic from "./pages/NewTopic";
 import Readings from "./pages/Readings";
 import NewReading from "./pages/NewReading";
+import MistakesIndex from "./pages/writing/mistakes/MistakesIndex";
+import MistakeReview from "./pages/writing/mistakes/MistakeReview";
 
 function App() {
   return (

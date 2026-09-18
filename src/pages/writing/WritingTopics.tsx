@@ -1,8 +1,8 @@
 import { Trash } from "lucide-react";
-import { getTopics, removeTopic, type Topic } from "../desktop";
+import { getTopics, removeTopic, type Topic } from "../../desktop";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import ContentLibrary from "../components/ContentLibrary";
+import ContentLibrary from "../../components/ContentLibrary";
 
 function TopicCard({
   topic,

@@ -286,3 +286,49 @@ pub fn get_common_mistakes(app: AppHandle) -> Result<Vec<CommonMistake>, String>
     results.sort_by(|left, right| right.count.cmp(&left.count));
     Ok(results)
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentMistake {
+    category_slug: &'static str,
+    category_title: &'static str,
+    original: String,
+    fix: String,
+    explanation: String,
+    writing_id: String,
+    writing_title: String,
+}
+
+const MAX_RECENT_MISTAKES: usize = 12;
+
+/// The most recent individual mistake instances, most recent writing first —
+/// a flat chronological feed (unlike `get_common_mistakes`, which groups and
+/// counts by category). Also a plain local read, no AI call involved.
+#[tauri::command]
+pub fn get_recent_mistakes(app: AppHandle) -> Result<Vec<RecentMistake>, String> {
+    let writings = get_writings(app)?;
+    let mut results = Vec::new();
+
+    'writings: for writing in &writings {
+        let Some(critics) = &writing.ai_critics else { continue };
+        let Ok(parsed) = serde_json::from_str::<serde_json::Value>(critics) else { continue };
+        for field in ["grammarMistakes", "vocabularyFeedback", "sentenceStructureFeedback"] {
+            let Some(items) = parsed[field].as_array() else { continue };
+            for item in items {
+                let Some(category) = item["category"].as_str().and_then(|slug| MISTAKE_CATEGORIES.iter().find(|category| category.slug == slug)) else { continue };
+                results.push(RecentMistake {
+                    category_slug: category.slug,
+                    category_title: category.title,
+                    original: item["original"].as_str().unwrap_or_default().to_string(),
+                    fix: item["correction"].as_str().or_else(|| item["suggestion"].as_str()).unwrap_or_default().to_string(),
+                    explanation: item["explanation"].as_str().unwrap_or_default().to_string(),
+                    writing_id: writing.id.clone(),
+                    writing_title: writing.title.clone(),
+                });
+                if results.len() >= MAX_RECENT_MISTAKES { break 'writings; }
+            }
+        }
+    }
+
+    Ok(results)
+}

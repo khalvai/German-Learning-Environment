@@ -1,8 +1,8 @@
+import MistakeSummaryCard from "../../../components/MistakeSummaryCard";
+import { getCommonMistakes, type CommonMistake } from "../../../desktop";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { getCommonMistakes, type CommonMistake } from "../desktop";
-import MistakeSummaryCard from "../components/MistakeSummaryCard";
 
 export default function MistakesIndex() {
   const [mistakes, setMistakes] = useState<CommonMistake[]>([]);
@@ -31,7 +31,10 @@ export default function MistakesIndex() {
 
       <section className="p-6">
         {error && (
-          <p className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+          <p
+            className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+            role="alert"
+          >
             {error}
           </p>
         )}
