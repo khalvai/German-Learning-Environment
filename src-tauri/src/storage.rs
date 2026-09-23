@@ -1,7 +1,11 @@
-use std::{fs, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+};
 
-use chrono::Utc;
-use serde::Serialize;
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
@@ -228,12 +232,104 @@ pub fn mistake_categories_prompt() -> String {
     MISTAKE_CATEGORIES.iter().map(|category| format!("{} ({})", category.slug, category.description)).collect::<Vec<_>>().join("; ")
 }
 
+/// Deterministic (stable across app restarts, unlike std's randomly-seeded
+/// hasher) FNV-1a hash, used to derive a mistake's identity from its category
+/// and wording so the same recurring mistake keeps the same id across writings.
+fn fnv1a64(input: &str) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in input.bytes() {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+/// A mistake's identity is its category plus its normalized wording, so the
+/// same recurring mistake (e.g. the same word-order slip on "ausstehen")
+/// resolves to the same id whenever and wherever it's seen again.
+fn mistake_id(category_slug: &str, original: &str) -> String {
+    let normalized = original.trim().to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ");
+    format!("{:016x}", fnv1a64(&format!("{category_slug}|{normalized}")))
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct MistakeSrsState {
+    interval_days: u32,
+    due_at: String,
+    last_rating: String,
+    updated_at: String,
+}
+
+fn srs_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app.path().app_data_dir().map_err(|error| error.to_string())?.join("grammar_srs.json"))
+}
+
+fn load_srs(app: &AppHandle) -> Result<HashMap<String, MistakeSrsState>, String> {
+    match fs::read_to_string(srs_path(app)?) {
+        Ok(text) => serde_json::from_str(&text).map_err(|error| error.to_string()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(HashMap::new()),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+fn save_srs(app: &AppHandle, state: &HashMap<String, MistakeSrsState>) -> Result<(), String> {
+    let path = srs_path(app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    fs::write(&path, serde_json::to_string_pretty(state).map_err(|error| error.to_string())?).map_err(|error| error.to_string())
+}
+
+fn is_due(srs: &HashMap<String, MistakeSrsState>, id: &str, now: &DateTime<Utc>) -> bool {
+    match srs.get(id) {
+        None => true,
+        Some(record) => DateTime::parse_from_rfc3339(&record.due_at).map(|due| due.with_timezone(&Utc) <= *now).unwrap_or(true),
+    }
+}
+
+/// Rates a specific recurring mistake (identified by `mistake_id`, category +
+/// wording) on an Anki-style Again/Hard/Good/Easy scale and reschedules when
+/// it's next due for practice. This never touches the underlying writing or
+/// its stored critique — only the review schedule, in a separate small file.
+///
+/// Again resets to due immediately (a lapse). Hard is always due in 1 day,
+/// a flat "still shaky" step that doesn't grow. Good is always due in 2 days
+/// (always under the Easy threshold, and doesn't grow — it's a "got it, but
+/// not confident" step you can land on repeatedly). Easy is due in 4+ days
+/// and doubles on every subsequent Easy rating (4 -> 8 -> 16 -> ... days), so
+/// a mistake the student keeps calling easy drifts further out of rotation.
+#[tauri::command]
+pub fn rate_grammar_mistake(app: AppHandle, mistake_id: String, rating: String) -> Result<(), String> {
+    if !["again", "hard", "good", "easy"].contains(&rating.as_str()) {
+        return Err("Invalid rating.".into());
+    }
+    let mut srs = load_srs(&app)?;
+    let previous = srs.get(&mistake_id).cloned();
+    let interval_days = match rating.as_str() {
+        "again" => 0,
+        "hard" => 1,
+        "good" => 2,
+        "easy" => match &previous {
+            Some(record) if record.last_rating == "easy" => record.interval_days * 2,
+            _ => 4,
+        },
+        _ => unreachable!(),
+    };
+    let now = Utc::now();
+    let due_at = (now + Duration::days(interval_days as i64)).to_rfc3339();
+    srs.insert(mistake_id, MistakeSrsState { interval_days, due_at, last_rating: rating, updated_at: now.to_rfc3339() });
+    save_srs(&app, &srs)
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-struct MistakeExample {
-    original: String,
-    fix: String,
-    explanation: String,
+pub(crate) struct MistakeExample {
+    pub(crate) id: String,
+    pub(crate) due: bool,
+    pub(crate) original: String,
+    pub(crate) fix: String,
+    pub(crate) explanation: String,
     writing_id: String,
     writing_title: String,
 }
@@ -241,11 +337,12 @@ struct MistakeExample {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommonMistake {
-    slug: &'static str,
-    title: &'static str,
-    description: &'static str,
+    pub(crate) slug: &'static str,
+    pub(crate) title: &'static str,
+    pub(crate) description: &'static str,
     count: usize,
-    examples: Vec<MistakeExample>,
+    pub(crate) due_count: usize,
+    pub(crate) examples: Vec<MistakeExample>,
 }
 
 /// Tallies how often each fixed category shows up across every analyzed
@@ -255,8 +352,10 @@ pub struct CommonMistake {
 /// nothing to cache or invalidate.
 #[tauri::command]
 pub fn get_common_mistakes(app: AppHandle) -> Result<Vec<CommonMistake>, String> {
-    let writings = get_writings(app)?;
-    let mut counts: std::collections::HashMap<&'static str, (usize, Vec<MistakeExample>)> = std::collections::HashMap::new();
+    let writings = get_writings(app.clone())?;
+    let srs = load_srs(&app)?;
+    let now = Utc::now();
+    let mut counts: HashMap<&'static str, (usize, Vec<MistakeExample>)> = HashMap::new();
 
     for writing in &writings {
         let Some(critics) = &writing.ai_critics else { continue };
@@ -265,10 +364,15 @@ pub fn get_common_mistakes(app: AppHandle) -> Result<Vec<CommonMistake>, String>
             let Some(items) = parsed[field].as_array() else { continue };
             for item in items {
                 let Some(category) = item["category"].as_str().and_then(|slug| MISTAKE_CATEGORIES.iter().find(|category| category.slug == slug)) else { continue };
+                let original = item["original"].as_str().unwrap_or_default().to_string();
+                let id = mistake_id(category.slug, &original);
+                let due = is_due(&srs, &id, &now);
                 let entry = counts.entry(category.slug).or_insert_with(|| (0, Vec::new()));
                 entry.0 += 1;
                 entry.1.push(MistakeExample {
-                    original: item["original"].as_str().unwrap_or_default().to_string(),
+                    id,
+                    due,
+                    original,
                     fix: item["correction"].as_str().or_else(|| item["suggestion"].as_str()).unwrap_or_default().to_string(),
                     explanation: item["explanation"].as_str().unwrap_or_default().to_string(),
                     writing_id: writing.id.clone(),
@@ -280,7 +384,8 @@ pub fn get_common_mistakes(app: AppHandle) -> Result<Vec<CommonMistake>, String>
 
     let mut results: Vec<CommonMistake> = counts.into_iter().map(|(slug, (count, examples))| {
         let category = MISTAKE_CATEGORIES.iter().find(|category| category.slug == slug).unwrap();
-        CommonMistake { slug: category.slug, title: category.title, description: category.description, count, examples }
+        let due_count = examples.iter().filter(|example| example.due).map(|example| example.id.as_str()).collect::<HashSet<_>>().len();
+        CommonMistake { slug: category.slug, title: category.title, description: category.description, count, due_count, examples }
     }).collect();
 
     results.sort_by(|left, right| right.count.cmp(&left.count));

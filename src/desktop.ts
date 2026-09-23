@@ -63,6 +63,8 @@ export interface WritingAnalysisResponse {
 }
 
 export interface CommonMistakeExample {
+  id: string;
+  due: boolean;
   original: string;
   fix: string;
   explanation: string;
@@ -75,8 +77,11 @@ export interface CommonMistake {
   title: string;
   description: string;
   count: number;
+  dueCount: number;
   examples: CommonMistakeExample[];
 }
+
+export type Rating = "again" | "hard" | "good" | "easy";
 
 export interface RecentMistake {
   categorySlug: MistakeCategory;
@@ -86,6 +91,21 @@ export interface RecentMistake {
   explanation: string;
   writingId: string;
   writingTitle: string;
+}
+
+export interface GrammarExercise {
+  type: "fill_blank" | "correction" | "multiple_choice";
+  instruction: string;
+  sentence: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation: string;
+  category: MistakeCategory;
+  mistakeId?: string;
+}
+
+export interface GrammarExerciseSet {
+  exercises: GrammarExercise[];
 }
 
 export interface ExplanationResponse {
@@ -118,6 +138,11 @@ export function removeWriting(id: string) { return invoke("remove_writing", { id
 
 export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }
 export function getCommonMistakes() { return invoke<CommonMistake[]>("get_common_mistakes"); }
+export function generateGrammarExercises(category?: MistakeCategory) { return invoke<GrammarExerciseSet>("generate_grammar_exercises", { category }); }
+export function rateGrammarMistake(mistakeId: string, rating: Rating) { return invoke<void>("rate_grammar_mistake", { mistakeId, rating }); }
+export function gradeGrammarAnswer(instruction: string, sentence: string, referenceAnswer: string, explanation: string, userAnswer: string) {
+  return invoke<boolean>("grade_grammar_answer", { instruction, sentence, referenceAnswer, explanation, userAnswer });
+}
 export function getRecentMistakes() { return invoke<RecentMistake[]>("get_recent_mistakes"); }
 export function explainWord(word: string, contextSentence: string | null) { return invoke<ExplanationResponse>("explain_word", { word, contextSentence }); }
 export function addWordToAnki(word: string, contextSentence?: string) { return invoke("add_word_to_anki", { word, contextSentence }); }

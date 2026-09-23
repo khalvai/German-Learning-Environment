@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Listening from "./pages/Listening";
 import Speaking from "./pages/Speaking";
 import Grammar from "./pages/Grammar";
+import GrammarPractice from "./pages/GrammarPractice";
 import ReadingDetail from "./pages/ReadingDetail";
 import WritingEditor from "./pages/writing/WritingEditor";
 import Writings from "./pages/writing/Writings";
@@ -28,6 +29,7 @@ function App() {
         <Route path="/listening" element={<Listening />} />
         <Route path="/speaking" element={<Speaking />} />
         <Route path="/grammar" element={<Grammar />} />
+        <Route path="/grammar/practice" element={<GrammarPractice />} />
 
         <Route path="/writings" element={<Writings />} />
         <Route path="/writings/mistakes" element={<MistakesIndex />} />
