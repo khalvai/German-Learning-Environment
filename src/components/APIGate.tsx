@@ -136,7 +136,7 @@ function KeyGate({
 export function ApiKeyGate() {
   return (
     <KeyGate
-      title="AI API key"
+      title="Open router api key"
       hint="Stored securely on this device."
       placeholder="sk-or-v1-..."
       hasCommand="has_api_key"
@@ -149,7 +149,7 @@ export function ApiKeyGate() {
 export function GatewayKeyGate() {
   return (
     <KeyGate
-      title="AI Gateway key"
+      title="Vercel API key"
       hint="Vercel AI Gateway API key, used to auto-grade grammar practice with Jev. Stored securely on this device."
       placeholder="AI Gateway API key..."
       hasCommand="has_gateway_key"
