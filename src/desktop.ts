@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 type ReadingPayload = Omit<Reading, "createdAt"> & { createdAt: string };
+type ListeningPayload = Omit<Listening, "createdAt"> & { createdAt: string };
 type TopicPayload = Omit<Topic, "createdAt"> & { createdAt: string };
 type WritingPayload = Omit<Writing, "createdAt"> & { createdAt: string };
 
@@ -9,6 +10,14 @@ export interface Reading {
   title: string;
   createdAt: Date;
   originalText: string;
+}
+
+export interface Listening {
+  id: string;
+  title: string;
+  createdAt: Date;
+  fileName: string;
+  positionSeconds: number;
 }
 
 export interface Topic {
@@ -118,6 +127,7 @@ export interface ExplanationResponse {
 }
 
 const toReading = (reading: ReadingPayload): Reading => ({ ...reading, createdAt: new Date(reading.createdAt) });
+const toListening = (listening: ListeningPayload): Listening => ({ ...listening, createdAt: new Date(listening.createdAt) });
 const toTopic = (topic: TopicPayload): Topic => ({ ...topic, createdAt: new Date(topic.createdAt) });
 const toWriting = (writing: WritingPayload): Writing => ({ ...writing, createdAt: new Date(writing.createdAt) });
 
@@ -125,6 +135,14 @@ export async function getReadings() { return (await invoke<ReadingPayload[]>("ge
 export async function getReading(id: string) { const reading = await invoke<ReadingPayload | null>("get_reading", { id }); return reading && toReading(reading); }
 export function saveReading(title: string, originalText: string) { return invoke<string>("save_reading", { title, originalText }); }
 export function removeReading(id: string) { return invoke("remove_reading", { id }); }
+
+export async function getListenings() { return (await invoke<ListeningPayload[]>("get_listenings")).map(toListening); }
+export async function getListening(id: string) { const listening = await invoke<ListeningPayload | null>("get_listening", { id }); return listening && toListening(listening); }
+/** `audioBase64` may be a full data URL — the backend keeps only the base64 payload. */
+export function saveListening(title: string, fileName: string, audioBase64: string) { return invoke<string>("save_listening", { title, fileName, audioBase64 }); }
+export function getListeningAudio(id: string) { return invoke<string>("get_listening_audio", { id }); }
+export function updateListeningPosition(id: string, positionSeconds: number) { return invoke("update_listening_position", { id, positionSeconds }); }
+export function removeListening(id: string) { return invoke("remove_listening", { id }); }
 
 export async function getTopics() { return (await invoke<TopicPayload[]>("get_topics")).map(toTopic); }
 export async function getTopic(id: string) { const topic = await invoke<TopicPayload | null>("get_topic", { id }); return topic && toTopic(topic); }

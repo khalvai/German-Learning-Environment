@@ -4,6 +4,7 @@ use std::{
     path::PathBuf,
 };
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -38,6 +39,19 @@ pub struct Writing {
     pub(crate) ai_critics: Option<String>,
     duration_seconds: u32,
     finished: bool,
+}
+
+/// A saved audio clip for the Listening section. The audio bytes live in a
+/// sibling file (`audioFile`) next to this markdown record; `positionSeconds`
+/// is the last playback offset so a clip can be resumed where it was left off.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Listening {
+    id: String,
+    title: String,
+    created_at: String,
+    file_name: String,
+    position_seconds: f64,
 }
 
 fn directory(app: &AppHandle, name: &str) -> Result<PathBuf, String> {
@@ -76,6 +90,16 @@ fn parse_topic(markdown: String) -> Topic {
         title: frontmatter_value(&markdown, "title"),
         created_at: frontmatter_value(&markdown, "createdAt"),
         question: section(&markdown, "Prompt"),
+    }
+}
+
+fn parse_listening(markdown: &str) -> Listening {
+    Listening {
+        id: frontmatter_value(markdown, "id"),
+        title: frontmatter_value(markdown, "title"),
+        created_at: frontmatter_value(markdown, "createdAt"),
+        file_name: frontmatter_value(markdown, "fileName"),
+        position_seconds: frontmatter_value(markdown, "positionSeconds").parse().unwrap_or(0.0),
     }
 }
 
@@ -126,6 +150,103 @@ pub fn get_reading(app: AppHandle, id: String) -> Result<Option<Reading>, String
 pub fn remove_reading(app: AppHandle, id: String) -> Result<(), String> {
     if !valid_id(&id) { return Err("Invalid reading id.".into()); }
     fs::remove_file(directory(&app, "readings")?.join(format!("{id}.md"))).map_err(|error| error.to_string())
+}
+
+/// Serializes one listening record. Kept in one place so `save_listening` and
+/// `update_listening_position` write byte-for-byte the same frontmatter shape.
+fn listening_markdown(listening: &Listening, audio_file: &str) -> String {
+    format!(
+        "---\nid: {}\ntitle: {}\ncreatedAt: {}\nfileName: {}\naudioFile: {}\npositionSeconds: {}\n---\n",
+        listening.id,
+        listening.title,
+        listening.created_at,
+        listening.file_name,
+        audio_file,
+        listening.position_seconds,
+    )
+}
+
+#[tauri::command]
+pub fn save_listening(app: AppHandle, title: String, file_name: String, audio_base64: String) -> Result<String, String> {
+    let id = Uuid::new_v4().to_string();
+    let extension = std::path::Path::new(&file_name)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .filter(|extension| extension.chars().all(|character| character.is_ascii_alphanumeric()))
+        .unwrap_or("audio")
+        .to_lowercase();
+    // The frontend sends a data URL from FileReader; keep only the base64 payload.
+    let encoded = audio_base64.rsplit("base64,").next().unwrap_or(&audio_base64).trim();
+    let bytes = STANDARD.decode(encoded).map_err(|error| format!("Invalid audio data: {error}"))?;
+    if bytes.is_empty() {
+        return Err("The audio file is empty.".into());
+    }
+
+    let directory = directory(&app, "listenings")?;
+    let audio_file = format!("{id}.{extension}");
+    fs::write(directory.join(&audio_file), bytes).map_err(|error| error.to_string())?;
+    let listening = Listening { id: id.clone(), title, created_at: Utc::now().to_rfc3339(), file_name, position_seconds: 0.0 };
+    fs::write(directory.join(format!("{id}.md")), listening_markdown(&listening, &audio_file)).map_err(|error| error.to_string())?;
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn get_listenings(app: AppHandle) -> Result<Vec<Listening>, String> {
+    let mut items = fs::read_dir(directory(&app, "listenings")?).map_err(|error| error.to_string())?
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|extension| extension == "md"))
+        .filter_map(|entry| fs::read_to_string(entry.path()).ok())
+        .map(|markdown| parse_listening(&markdown)).collect::<Vec<_>>();
+    items.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn get_listening(app: AppHandle, id: String) -> Result<Option<Listening>, String> {
+    if !valid_id(&id) { return Err("Invalid listening id.".into()); }
+    match fs::read_to_string(directory(&app, "listenings")?.join(format!("{id}.md"))) {
+        Ok(markdown) => Ok(Some(parse_listening(&markdown))),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+/// Returns the clip's raw audio, base64-encoded, so the frontend can rebuild a
+/// Blob for the `<audio>` element and decode it into a waveform.
+#[tauri::command]
+pub fn get_listening_audio(app: AppHandle, id: String) -> Result<String, String> {
+    if !valid_id(&id) { return Err("Invalid listening id.".into()); }
+    let directory = directory(&app, "listenings")?;
+    let markdown = fs::read_to_string(directory.join(format!("{id}.md"))).map_err(|error| error.to_string())?;
+    let audio_file = frontmatter_value(&markdown, "audioFile");
+    if audio_file.is_empty() { return Err("Audio file is missing for this clip.".into()); }
+    let bytes = fs::read(directory.join(audio_file)).map_err(|error| error.to_string())?;
+    Ok(STANDARD.encode(bytes))
+}
+
+#[tauri::command]
+pub fn update_listening_position(app: AppHandle, id: String, position_seconds: f64) -> Result<(), String> {
+    if !valid_id(&id) { return Err("Invalid listening id.".into()); }
+    let path = directory(&app, "listenings")?.join(format!("{id}.md"));
+    let markdown = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    let audio_file = frontmatter_value(&markdown, "audioFile");
+    let mut listening = parse_listening(&markdown);
+    listening.position_seconds = if position_seconds.is_finite() && position_seconds >= 0.0 { position_seconds } else { 0.0 };
+    fs::write(&path, listening_markdown(&listening, &audio_file)).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn remove_listening(app: AppHandle, id: String) -> Result<(), String> {
+    if !valid_id(&id) { return Err("Invalid listening id.".into()); }
+    let directory = directory(&app, "listenings")?;
+    let md_path = directory.join(format!("{id}.md"));
+    if let Ok(markdown) = fs::read_to_string(&md_path) {
+        let audio_file = frontmatter_value(&markdown, "audioFile");
+        if !audio_file.is_empty() {
+            let _ = fs::remove_file(directory.join(audio_file));
+        }
+    }
+    fs::remove_file(md_path).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

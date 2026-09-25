@@ -3,6 +3,8 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 
 import Home from "./pages/Home";
 import Listening from "./pages/Listening";
+import NewListening from "./pages/NewListening";
+import ListeningDetail from "./pages/ListeningDetail";
 import Speaking from "./pages/Speaking";
 import Grammar from "./pages/Grammar";
 import GrammarPractice from "./pages/GrammarPractice";
@@ -27,6 +29,8 @@ function App() {
         <Route path="/reading/new" element={<NewReading />} />
 
         <Route path="/listening" element={<Listening />} />
+        <Route path="/listening/new" element={<NewListening />} />
+        <Route path="/listening/:id" element={<ListeningDetail />} />
         <Route path="/speaking" element={<Speaking />} />
         <Route path="/grammar" element={<Grammar />} />
         <Route path="/grammar/practice" element={<GrammarPractice />} />
