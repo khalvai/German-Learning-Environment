@@ -1,15 +1,22 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { Save, Sparkles, Flag, Timer } from "lucide-react";
+import { Save, Sparkles, Flag, Timer, BookOpen } from "lucide-react";
 import {
   saveWriting,
   getWriting,
   getTopic,
+  getTopics,
   analyzeWriting,
   MISTAKE_CATEGORY_LABELS,
+  type Topic,
   type WritingAnalysisResponse,
   type MistakeCategory,
 } from "../../desktop";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import Button from "../../components/Button";
 
 type Mode = "writing" | "dictation";
@@ -191,6 +198,10 @@ export default function WritingEditor() {
             onTextChange={setText}
             question={question}
             onQuestionChange={setQuestion}
+            onPickTopic={(topic) => {
+              setQuestion(topic.question);
+              if (!title.trim()) setTitle(topic.title);
+            }}
             disabled={finished}
           />
         ) : (
@@ -362,12 +373,14 @@ function WritingMode({
   onTextChange,
   question,
   onQuestionChange,
+  onPickTopic,
   disabled,
 }: {
   text: string;
   onTextChange: (v: string) => void;
   question: string;
   onQuestionChange: (v: string) => void;
+  onPickTopic: (topic: Topic) => void;
   disabled: boolean;
 }) {
   const [textAreaWidth, setTextAreaWidth] = useState(65);
@@ -420,7 +433,7 @@ function WritingMode({
       <textarea
         value={text}
         onChange={(e) => onTextChange(e.target.value)}
-        placeholder="Questions ..."
+        placeholder="Start writing..."
         spellCheck={false}
         disabled={disabled}
         className=" md:h-full text-lg leading-9 outline-none  resize-none flex-1 p-10 overflow-auto disabled:opacity-70 disabled:cursor-not-allowed"
@@ -438,18 +451,117 @@ function WritingMode({
         ></div>
       )}
 
-      <textarea
-        value={question}
-        onChange={(e) => onQuestionChange(e.target.value)}
-        placeholder="Questions ..."
-        spellCheck={false}
+      <aside
         style={
           isDesktop
             ? { width: `${100 - textAreaWidth}%` }
             : { height: `${100 - textAreaWidth}%` }
         }
-        className=" md:h-full text-lg p-10 leading-9 outline-none  font-serif resize-none  md:w-[90%]"
-      />
+        className="flex min-w-0 flex-col md:h-full"
+      >
+        <div className="flex items-center justify-between gap-2 px-10 pt-6">
+          <span className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+            Topic
+          </span>
+          <TopicPicker onPick={onPickTopic} disabled={disabled} />
+        </div>
+        <textarea
+          value={question}
+          onChange={(e) => onQuestionChange(e.target.value)}
+          placeholder="Write your own topic or question here, or choose a saved topic."
+          spellCheck={false}
+          className="flex-1 resize-none p-10 pt-4 font-serif text-lg leading-9 outline-none"
+        />
+      </aside>
+    </div>
+  );
+}
+
+function TopicPicker({
+  onPick,
+  disabled,
+}: {
+  onPick: (topic: Topic) => void;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [topics, setTopics] = useState<Topic[] | null>(null);
+  const [error, setError] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setError(false);
+    getTopics().then(setTopics).catch(() => setError(true));
+
+    const handlePointerDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-md border border-app-border px-3 py-1.5 text-sm text-slate-300 transition hover:text-white disabled:opacity-50"
+      >
+        <BookOpen className="h-4 w-4" />
+        Choose saved topic
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-10 mt-1 w-72 rounded-md border border-app-border bg-[rgb(57,57,58)] p-1 shadow-lg">
+          <div className="max-h-72 overflow-y-auto">
+            {error ? (
+              <p className="p-3 text-xs text-red-300">
+                Could not load your topics.
+              </p>
+            ) : topics === null ? (
+              <p className="p-3 text-xs text-slate-400">Loading…</p>
+            ) : topics.length === 0 ? (
+              <p className="p-3 text-xs text-slate-400">
+                No saved topics yet.
+              </p>
+            ) : (
+              topics.map((topic) => (
+                <button
+                  key={topic.id}
+                  onClick={() => {
+                    onPick(topic);
+                    setOpen(false);
+                  }}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-white/10"
+                >
+                  <span className="block truncate text-sm font-medium">
+                    {topic.title}
+                  </span>
+                  <span className="mt-0.5 line-clamp-2 text-xs text-slate-400">
+                    {topic.question}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+          <Link
+            to="/writings/topics"
+            className="mt-1 block border-t border-app-border px-3 py-2 text-xs text-slate-400 hover:text-white"
+          >
+            Manage topics
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

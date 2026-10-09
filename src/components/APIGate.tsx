@@ -146,15 +146,3 @@ export function ApiKeyGate() {
   );
 }
 
-export function GatewayKeyGate() {
-  return (
-    <KeyGate
-      title="Vercel API key"
-      hint="Vercel AI Gateway API key, used to auto-grade grammar practice with Jev. Stored securely on this device."
-      placeholder="AI Gateway API key..."
-      hasCommand="has_gateway_key"
-      saveCommand="save_gateway_key"
-      removeCommand="remove_gateway_key"
-    />
-  );
-}

@@ -28,6 +28,7 @@ export default function ListeningDetail() {
         if (!record) {
           setNotFound(true);
           return;
+
         }
         setListening(record);
         const audio = await getListeningAudio(id);

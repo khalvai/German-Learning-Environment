@@ -249,7 +249,7 @@ async function fetchAudioClipsFromCommons(
   const searchRes = await safeFetch(COMMONS_SEARCH(word), "Commons search");
   if (!searchRes.ok) return [];
   const titles: string[] = ((await searchRes.json())?.query?.search || []).map(
-    (r: any) => r.title,
+    (r: { title: string }) => r.title,
   );
   if (titles.length === 0) return [];
 
@@ -258,9 +258,10 @@ async function fetchAudioClipsFromCommons(
     "Commons imageinfo",
   );
   if (!infoRes.ok) return [];
-  const pages = (await infoRes.json())?.query?.pages || {};
+  type CommonsPage = { title?: string; imageinfo?: { url?: string }[] };
+  const pages: Record<string, CommonsPage> = (await infoRes.json())?.query?.pages || {};
   return Object.values(pages)
-    .map((p: any) => ({
+    .map((p) => ({
       url: p.imageinfo?.[0]?.url as string | undefined,
       title: (p.title || "").replace(/^File:/, "").replace(/\.[a-z0-9]+$/i, ""),
       region: null as string | null,
@@ -381,10 +382,6 @@ export default function GermanWordLookup({
 }: GermanWordLookupProps) {
   const [input, setInput] = useState(selectedWord);
 
-  useEffect(() => {
-    setInput(selectedWord);
-  }, [selectedWord]);
-
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
 
@@ -418,7 +415,7 @@ export default function GermanWordLookup({
         setAiLoading(false);
       }
     },
-    [selectedWord, contextSentence],
+    [],
   );
 
   useEffect(() => {

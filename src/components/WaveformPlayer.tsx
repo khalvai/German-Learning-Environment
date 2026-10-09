@@ -106,7 +106,10 @@ export default function WaveformPlayer({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
+  const [mediaDuration, setMediaDuration] = useState(0);
+  const [decodedDuration, setDecodedDuration] = useState(0);
+  // WebKit reports Infinity/NaN for some MP3s (VBR, no length header); the decoded length is exact.
+  const duration = Number.isFinite(mediaDuration) && mediaDuration > 0 ? mediaDuration : decodedDuration;
   const [currentTime, setCurrentTime] = useState(initialPosition);
   const [hover, setHover] = useState<Hover | null>(null);
 
@@ -179,6 +182,7 @@ export default function WaveformPlayer({
         const decoded = await audioContext.decodeAudioData(bytes.slice().buffer as ArrayBuffer);
         if (cancelled) return;
         peaksRef.current = computePeaks(decoded, SOURCE_BUCKETS);
+        setDecodedDuration(decoded.duration);
         setReady(true);
         drawRef.current();
       } catch {
@@ -276,12 +280,13 @@ export default function WaveformPlayer({
         preload="metadata"
         onLoadedMetadata={(event) => {
           const audio = event.currentTarget;
-          setDuration(audio.duration);
-          if (initialPosition > 0 && initialPosition < audio.duration) {
+          setMediaDuration(audio.duration);
+          if (initialPosition > 0 && (!Number.isFinite(audio.duration) || initialPosition < audio.duration)) {
             audio.currentTime = initialPosition;
             setCurrentTime(initialPosition);
           }
         }}
+        onDurationChange={(event) => setMediaDuration(event.currentTarget.duration)}
         onTimeUpdate={(event) => {
           const audio = event.currentTarget;
           setCurrentTime(audio.currentTime);

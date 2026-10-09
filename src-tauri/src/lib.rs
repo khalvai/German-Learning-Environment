@@ -4,7 +4,6 @@ mod storage;
 
 const KEYRING_SERVICE: &str = "com.khalvai.environment";
 const KEYRING_ACCOUNT: &str = "groq-api-key";
-const GATEWAY_KEYRING_ACCOUNT: &str = "ai-gateway-api-key";
 
 fn keyring_entry(account: &str) -> Result<Entry, String> {
     Entry::new(KEYRING_SERVICE, account).map_err(|error| error.to_string())
@@ -19,10 +18,6 @@ fn read_keyring_key(account: &str, missing_message: &str) -> Result<String, Stri
 
 fn read_api_key() -> Result<String, String> {
     read_keyring_key(KEYRING_ACCOUNT, "No API key configured. Add one from the home screen.")
-}
-
-fn read_gateway_key() -> Result<String, String> {
-    read_keyring_key(GATEWAY_KEYRING_ACCOUNT, "No AI Gateway key configured. Add one from the home screen.")
 }
 
 #[tauri::command]
@@ -46,32 +41,6 @@ fn save_api_key(api_key: String) -> Result<(), String> {
 #[tauri::command]
 fn remove_api_key() -> Result<(), String> {
     match keyring_entry(KEYRING_ACCOUNT)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(error) => Err(error.to_string()),
-    }
-}
-
-#[tauri::command]
-fn has_gateway_key() -> Result<bool, String> {
-    match keyring_entry(GATEWAY_KEYRING_ACCOUNT)?.get_password() {
-        Ok(_) => Ok(true),
-        Err(keyring::Error::NoEntry) => Ok(false),
-        Err(error) => Err(error.to_string()),
-    }
-}
-
-#[tauri::command]
-fn save_gateway_key(api_key: String) -> Result<(), String> {
-    let api_key = api_key.trim();
-    if api_key.is_empty() {
-        return Err("API key cannot be empty.".into());
-    }
-    keyring_entry(GATEWAY_KEYRING_ACCOUNT)?.set_password(api_key).map_err(|error| error.to_string())
-}
-
-#[tauri::command]
-fn remove_gateway_key() -> Result<(), String> {
-    match keyring_entry(GATEWAY_KEYRING_ACCOUNT)?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(error) => Err(error.to_string()),
     }
@@ -267,14 +236,6 @@ async fn add_word_to_anki(word: String, context_sentence: Option<String>) -> Res
     Ok(body["result"].clone())
 }
 
-const AI_GATEWAY_SYSTEMONE_URL: &str = "https://ai-gateway.vercel.sh/typesafe/v1/systemone";
-
-/// Grades a free-text grammar exercise answer with Jev (TypeSafe's System One
-/// model, reached through the Vercel AI Gateway) instead of asking the
-/// student to self-report. The exercise's stored `correctAnswer` is only one
-/// valid phrasing, not the only one, so this asks Jev a yes/no question about
-/// whether the student's own answer is also grammatically valid here, rather
-/// than string-comparing it against `correctAnswer`.
 #[tauri::command]
 async fn grade_grammar_answer(
     instruction: String,
@@ -287,47 +248,21 @@ async fn grade_grammar_answer(
     if user_answer.is_empty() {
         return Err("Type an answer first.".into());
     }
-    let api_key = read_gateway_key()?;
-    let state = format!(
-        "Exercise instruction: {instruction}\nSentence: {sentence}\nOne known-correct reference answer: {reference_answer}\nWhy the reference answer is correct: {explanation}\nStudent's answer: {user_answer}"
+
+    let system = "You are a German grammar grader. You will be given a grammar exercise, a known-correct reference answer, and a student's answer. \
+Decide whether the student's answer is also a correct, natural way to complete or fix the German sentence for the grammar point being tested — even if it differs in wording from the reference answer. \
+Return valid JSON only with a single field: {\"correct\": true} if the student's answer is grammatically and semantically valid, or {\"correct\": false} if it contains a real grammar, spelling, or meaning mistake. \
+Do not penalize minor differences in wording, capitalization style, or alternative valid phrasings.";
+
+    let prompt = format!(
+        "Exercise instruction: {instruction}\nSentence: {sentence}\nReference answer: {reference_answer}\nWhy the reference answer is correct: {explanation}\nStudent's answer: {user_answer}"
     );
-    let response = reqwest::Client::new()
-        .post(AI_GATEWAY_SYSTEMONE_URL)
-        .bearer_auth(api_key)
-        .json(&serde_json::json!({
-            "model": "typesafe-ai/jev",
-            "state": state,
-            "questions": {
-                "is_correct": {
-                    "type": "noul",
-                    "instructions": "Is the student's answer also a correct, natural way to complete or fix this German sentence for the grammar point being tested — even if it differs in wording from the reference answer? Answer false only if the student's answer has an actual grammar, spelling, or meaning mistake.",
-                    "criteria": {
-                        "true": "The student's answer is grammatically and semantically valid here, whether or not it matches the reference answer's exact wording.",
-                        "false": "The student's answer contains a real mistake."
-                    }
-                }
-            }
-        }))
-        .send()
-        .await
-        .map_err(|error| format!("Could not reach AI Gateway: {error}"))?;
 
-    let status = response.status();
-    let raw_body = response.text().await.map_err(|error| format!("Could not read AI Gateway response: {error}"))?;
-    eprintln!("[ai-gateway] jev response, status {status}: {raw_body}, {state}");
-    let body: serde_json::Value = serde_json::from_str(&raw_body).unwrap_or(serde_json::Value::Null);
-    if !status.is_success() {
-        let message = body["message"].as_str().or_else(|| body["error"]["message"].as_str());
-        return Err(match message {
-            Some(message) => format!("{message} ({status})"),
-            None => format!("AI Gateway request failed ({status}): {raw_body}"),
-        });
-    }
+    let result = openrouter_json(system, prompt).await?;
 
-    body["answers"]["is_correct"]["noul"]
-        .as_f64()
-        .map(|noul| noul >= 0.5)
-        .ok_or_else(|| "AI Gateway returned no answer.".to_string())
+    result["correct"]
+        .as_bool()
+        .ok_or_else(|| "Grading returned no answer.".to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -338,9 +273,6 @@ pub fn run() {
             has_api_key,
             save_api_key,
             remove_api_key,
-            has_gateway_key,
-            save_gateway_key,
-            remove_gateway_key,
             storage::save_reading,
             storage::get_readings,
             storage::get_reading,

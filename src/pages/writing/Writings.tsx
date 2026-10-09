@@ -117,7 +117,7 @@ export default function Writings() {
       itemLabel="writing"
       loading={loading}
       error={error}
-      onCreate={() => navigate("/writings/topics")}
+      onCreate={() => navigate("/writings/new")}
       beforeContent={
         recentMistakes.length > 0 ? (
           <RecentMistakesSection mistakes={recentMistakes} />

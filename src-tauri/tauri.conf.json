@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "environment",
+  "productName": "Geman Learning Environment",
   "version": "0.2.6",
   "identifier": "com.khalvai.environment",
   "build": {

@@ -1,5 +1,5 @@
 import SkillCard from "../components/SkillCard";
-import { ApiKeyGate, GatewayKeyGate } from "../components/APIGate";
+import { ApiKeyGate } from "../components/APIGate";
 
 export default function Home() {
   return (
@@ -11,7 +11,6 @@ export default function Home() {
         <SkillCard title="Grammar" path="/grammar" />
         <SkillCard title="Writing" path="/writings" />
         <ApiKeyGate />
-        <GatewayKeyGate />
       </div>
     </div>
   );
