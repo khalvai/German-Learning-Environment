@@ -4,13 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ContentLibrary from "../../components/ContentLibrary";
 
-function TopicCard({
-  topic,
-  onRemove,
-}: {
-  topic: Topic;
-  onRemove: () => Promise<void>;
-}) {
+function TopicCard({ topic, onRemove }: { topic: Topic; onRemove: () => Promise<void> }) {
   return (
     <div className="group relative flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg">
       <button
@@ -25,17 +19,10 @@ function TopicCard({
         <Trash className="w-4 h-4" />
       </button>
 
-      <Link
-        to={`/writings/new?topic=${topic.id}`}
-        className="flex flex-col w-full h-full"
-      >
-        <h2 className="text-base font-medium mb-2 line-clamp-2">
-          {topic.title}
-        </h2>
+      <Link to={`/writings/new?topic=${topic.id}`} className="flex flex-col w-full h-full">
+        <h2 className="text-base font-medium mb-2 line-clamp-2">{topic.title}</h2>
 
-        <pre className="line-clamp-8 text-sm text-gray-400 whitespace-pre-wrap flex-1">
-          {topic.question}
-        </pre>
+        <pre className="line-clamp-8 text-sm text-gray-400 whitespace-pre-wrap flex-1">{topic.question}</pre>
       </Link>
     </div>
   );

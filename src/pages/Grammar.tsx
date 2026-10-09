@@ -29,7 +29,10 @@ export default function Grammar() {
 
       <section className="p-6">
         {error && (
-          <p className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+          <p
+            className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+            role="alert"
+          >
             {error}
           </p>
         )}
@@ -46,7 +49,8 @@ export default function Grammar() {
           </p>
         ) : dueMistakes.length === 0 ? (
           <p className="p-4 text-slate-400">
-            You're all caught up — nothing is due for practice right now. Rated mistakes come back around later; check back then.
+            You're all caught up — nothing is due for practice right now. Rated mistakes come back around later; check
+            back then.
           </p>
         ) : (
           <>

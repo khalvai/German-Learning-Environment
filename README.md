@@ -1,6 +1,6 @@
 # Environment 🇩🇪
 
-Something tha I needed for learning German :) 
+Something tha I needed for learning German :)
 
 It runs natively on your machine and keeps everything — your texts, your essays, your mistakes — in a local database. No account, no cloud sync. The only network calls it makes are to an LLM (via [OpenRouter](https://openrouter.ai/) or the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway)) for the AI-powered bits, and to Wiktionary for dictionary lookups.
 
@@ -14,11 +14,12 @@ Paste in any German text — an article, a story, whatever you're reading — an
 
 ![Reading library](docs/screenshots/02-reading-library.png)
 
-Open one up and double-click any word to look it up. This isn't an AI guess — it pulls real definitions, gender/plural forms, verb conjugations, and pronunciation audio straight from Wiktionary. If you want more than the dictionary definition, there's a separate "Explain with AI" option that explains what the word means *in that specific sentence*, with fresh examples.
+Open one up and double-click any word to look it up. This isn't an AI guess — it pulls real definitions, gender/plural forms, verb conjugations, and pronunciation audio straight from Wiktionary. If you want more than the dictionary definition, there's a separate "Explain with AI" option that explains what the word means _in that specific sentence_, with fresh examples.
 
 ![Word lookup panel](docs/screenshots/03-reading-vocabulary.png)
 
 ### ✍️ Writing
+
 image.png
 Create a topic (or write freely), and get a proper split-pane editor — your essay on one side, the prompt on the other — with a running timer so you know how long you actually spent.
 
@@ -36,7 +37,7 @@ This is the reason the app exists. Every mistake the AI catches in your writing 
 
 ![Grammar overview with due counts](docs/screenshots/06-grammar-overview.png)
 
-When something's due, you drill it — but not with the same sentence you got wrong before. The AI generates *fresh* exercises targeting that specific weakness, grades your free-text answers automatically, and reschedules the next review based on how well you knew it.
+When something's due, you drill it — but not with the same sentence you got wrong before. The AI generates _fresh_ exercises targeting that specific weakness, grades your free-text answers automatically, and reschedules the next review based on how well you knew it.
 
 ![Grammar practice exercise](docs/screenshots/07-grammar-practice.png)
 

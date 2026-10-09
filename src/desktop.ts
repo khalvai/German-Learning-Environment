@@ -119,7 +119,17 @@ export interface GrammarExerciseSet {
 
 export interface ExplanationResponse {
   partOfSpeech: string;
-  grammar?: { noun?: { article?: string; singular?: string; plural?: string }; verb?: { infinitive?: string; presentThirdPerson?: string; präteritumThirdPerson?: string; perfectParticiple?: string; perfectAuxiliary?: "haben" | "sein" }; adjective?: { comparative?: string; superlative?: string } };
+  grammar?: {
+    noun?: { article?: string; singular?: string; plural?: string };
+    verb?: {
+      infinitive?: string;
+      presentThirdPerson?: string;
+      präteritumThirdPerson?: string;
+      perfectParticiple?: string;
+      perfectAuxiliary?: "haben" | "sein";
+    };
+    adjective?: { comparative?: string; superlative?: string };
+  };
   definitions: string[];
   meaningInContext?: string;
   exampleSentenceGerman: string;
@@ -127,40 +137,111 @@ export interface ExplanationResponse {
 }
 
 const toReading = (reading: ReadingPayload): Reading => ({ ...reading, createdAt: new Date(reading.createdAt) });
-const toListening = (listening: ListeningPayload): Listening => ({ ...listening, createdAt: new Date(listening.createdAt) });
+const toListening = (listening: ListeningPayload): Listening => ({
+  ...listening,
+  createdAt: new Date(listening.createdAt),
+});
 const toTopic = (topic: TopicPayload): Topic => ({ ...topic, createdAt: new Date(topic.createdAt) });
 const toWriting = (writing: WritingPayload): Writing => ({ ...writing, createdAt: new Date(writing.createdAt) });
 
-export async function getReadings() { return (await invoke<ReadingPayload[]>("get_readings")).map(toReading); }
-export async function getReading(id: string) { const reading = await invoke<ReadingPayload | null>("get_reading", { id }); return reading && toReading(reading); }
-export function saveReading(title: string, originalText: string) { return invoke<string>("save_reading", { title, originalText }); }
-export function removeReading(id: string) { return invoke("remove_reading", { id }); }
+export async function getReadings() {
+  return (await invoke<ReadingPayload[]>("get_readings")).map(toReading);
+}
+export async function getReading(id: string) {
+  const reading = await invoke<ReadingPayload | null>("get_reading", { id });
+  return reading && toReading(reading);
+}
+export function saveReading(title: string, originalText: string) {
+  return invoke<string>("save_reading", { title, originalText });
+}
+export function removeReading(id: string) {
+  return invoke("remove_reading", { id });
+}
 
-export async function getListenings() { return (await invoke<ListeningPayload[]>("get_listenings")).map(toListening); }
-export async function getListening(id: string) { const listening = await invoke<ListeningPayload | null>("get_listening", { id }); return listening && toListening(listening); }
+export async function getListenings() {
+  return (await invoke<ListeningPayload[]>("get_listenings")).map(toListening);
+}
+export async function getListening(id: string) {
+  const listening = await invoke<ListeningPayload | null>("get_listening", { id });
+  return listening && toListening(listening);
+}
 /** `audioBase64` may be a full data URL — the backend keeps only the base64 payload. */
-export function saveListening(title: string, fileName: string, audioBase64: string) { return invoke<string>("save_listening", { title, fileName, audioBase64 }); }
-export function getListeningAudio(id: string) { return invoke<string>("get_listening_audio", { id }); }
-export function updateListeningPosition(id: string, positionSeconds: number) { return invoke("update_listening_position", { id, positionSeconds }); }
-export function removeListening(id: string) { return invoke("remove_listening", { id }); }
+export function saveListening(title: string, fileName: string, audioBase64: string) {
+  return invoke<string>("save_listening", { title, fileName, audioBase64 });
+}
+export function getListeningAudio(id: string) {
+  return invoke<string>("get_listening_audio", { id });
+}
+export function updateListeningPosition(id: string, positionSeconds: number) {
+  return invoke("update_listening_position", { id, positionSeconds });
+}
+export function removeListening(id: string) {
+  return invoke("remove_listening", { id });
+}
 
-export async function getTopics() { return (await invoke<TopicPayload[]>("get_topics")).map(toTopic); }
-export async function getTopic(id: string) { const topic = await invoke<TopicPayload | null>("get_topic", { id }); return topic && toTopic(topic); }
-export function saveTopic(title: string, question: string) { return invoke<string>("save_topic", { title, question }); }
-export function removeTopic(id: string) { return invoke("remove_topic", { id }); }
+export async function getTopics() {
+  return (await invoke<TopicPayload[]>("get_topics")).map(toTopic);
+}
+export async function getTopic(id: string) {
+  const topic = await invoke<TopicPayload | null>("get_topic", { id });
+  return topic && toTopic(topic);
+}
+export function saveTopic(title: string, question: string) {
+  return invoke<string>("save_topic", { title, question });
+}
+export function removeTopic(id: string) {
+  return invoke("remove_topic", { id });
+}
 
-export async function getWritings() { return (await invoke<WritingPayload[]>("get_writings")).map(toWriting); }
-export async function getWriting(id: string) { const writing = await invoke<WritingPayload | null>("get_writing", { id }); return writing && toWriting(writing); }
-export function saveWriting(id: string | undefined, title: string, content: string, question: string, aiCritics: string | undefined, durationSeconds: number, finished: boolean) { return invoke<string>("save_writing", { id, title, content, question, aiCritics, durationSeconds, finished }); }
-export function removeWriting(id: string) { return invoke("remove_writing", { id }); }
+export async function getWritings() {
+  return (await invoke<WritingPayload[]>("get_writings")).map(toWriting);
+}
+export async function getWriting(id: string) {
+  const writing = await invoke<WritingPayload | null>("get_writing", { id });
+  return writing && toWriting(writing);
+}
+export function saveWriting(
+  id: string | undefined,
+  title: string,
+  content: string,
+  question: string,
+  aiCritics: string | undefined,
+  durationSeconds: number,
+  finished: boolean,
+) {
+  return invoke<string>("save_writing", { id, title, content, question, aiCritics, durationSeconds, finished });
+}
+export function removeWriting(id: string) {
+  return invoke("remove_writing", { id });
+}
 
-export function analyzeWriting(content: string, question: string) { return invoke<WritingAnalysisResponse>("analyze_writing", { content, question }); }
-export function getCommonMistakes() { return invoke<CommonMistake[]>("get_common_mistakes"); }
-export function generateGrammarExercises(category?: MistakeCategory) { return invoke<GrammarExerciseSet>("generate_grammar_exercises", { category }); }
-export function rateGrammarMistake(mistakeId: string, rating: Rating) { return invoke<void>("rate_grammar_mistake", { mistakeId, rating }); }
-export function gradeGrammarAnswer(instruction: string, sentence: string, referenceAnswer: string, explanation: string, userAnswer: string) {
+export function analyzeWriting(content: string, question: string) {
+  return invoke<WritingAnalysisResponse>("analyze_writing", { content, question });
+}
+export function getCommonMistakes() {
+  return invoke<CommonMistake[]>("get_common_mistakes");
+}
+export function generateGrammarExercises(category?: MistakeCategory) {
+  return invoke<GrammarExerciseSet>("generate_grammar_exercises", { category });
+}
+export function rateGrammarMistake(mistakeId: string, rating: Rating) {
+  return invoke<void>("rate_grammar_mistake", { mistakeId, rating });
+}
+export function gradeGrammarAnswer(
+  instruction: string,
+  sentence: string,
+  referenceAnswer: string,
+  explanation: string,
+  userAnswer: string,
+) {
   return invoke<boolean>("grade_grammar_answer", { instruction, sentence, referenceAnswer, explanation, userAnswer });
 }
-export function getRecentMistakes() { return invoke<RecentMistake[]>("get_recent_mistakes"); }
-export function explainWord(word: string, contextSentence: string | null) { return invoke<ExplanationResponse>("explain_word", { word, contextSentence }); }
-export function addWordToAnki(word: string, contextSentence?: string) { return invoke("add_word_to_anki", { word, contextSentence }); }
+export function getRecentMistakes() {
+  return invoke<RecentMistake[]>("get_recent_mistakes");
+}
+export function explainWord(word: string, contextSentence: string | null) {
+  return invoke<ExplanationResponse>("explain_word", { word, contextSentence });
+}
+export function addWordToAnki(word: string, contextSentence?: string) {
+  return invoke("add_word_to_anki", { word, contextSentence });
+}

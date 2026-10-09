@@ -31,7 +31,10 @@ export default function ContentLibrary({
 
       <section className="p-6" aria-label={title}>
         {error && (
-          <p className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+          <p
+            className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+            role="alert"
+          >
             {error}
           </p>
         )}

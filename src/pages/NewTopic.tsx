@@ -40,10 +40,16 @@ export default function NewTopic() {
       </nav>
 
       <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6 p-6">
-        {error && <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p>}
+        {error && (
+          <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+            {error}
+          </p>
+        )}
 
         <div>
-          <label htmlFor="topic-title" className="mb-1 block text-sm text-gray-400">Title</label>
+          <label htmlFor="topic-title" className="mb-1 block text-sm text-gray-400">
+            Title
+          </label>
           <input
             id="topic-title"
             type="text"
@@ -56,7 +62,9 @@ export default function NewTopic() {
         </div>
 
         <div>
-          <label htmlFor="topic-question" className="mb-1 block text-sm text-gray-400">Question</label>
+          <label htmlFor="topic-question" className="mb-1 block text-sm text-gray-400">
+            Question
+          </label>
           <textarea
             id="topic-question"
             value={question}
@@ -69,20 +77,12 @@ export default function NewTopic() {
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <Button
-            disabled={saving}
-            type="submit"
-            className=""
-          >
+          <Button disabled={saving} type="submit" className="">
             <Save className="h-4 w-4" />
             Save
           </Button>
 
-          <Button
-            disabled={false}
-            onClick={() => navigate("/writings/topics")}
-            className=""
-          >
+          <Button disabled={false} onClick={() => navigate("/writings/topics")} className="">
             Cancel
           </Button>
         </div>

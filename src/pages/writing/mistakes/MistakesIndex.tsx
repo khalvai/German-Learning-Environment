@@ -19,11 +19,7 @@ export default function MistakesIndex() {
   return (
     <main className="min-h-screen">
       <header className="flex h-16 items-center gap-3 border-b border-app-border px-6">
-        <Link
-          to="/writings"
-          aria-label="Back to writings"
-          className="text-slate-400 transition hover:text-slate-200"
-        >
+        <Link to="/writings" aria-label="Back to writings" className="text-slate-400 transition hover:text-slate-200">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <h1 className="text-2xl font-bold">Mistake Types</h1>
@@ -42,9 +38,7 @@ export default function MistakesIndex() {
         {loading ? (
           <p className="p-4 text-slate-400">Loading your mistakes…</p>
         ) : mistakes.length === 0 && !error ? (
-          <p className="p-4 text-slate-400">
-            No mistakes tracked yet — analyze a few writings first.
-          </p>
+          <p className="p-4 text-slate-400">No mistakes tracked yet — analyze a few writings first.</p>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             {mistakes.map((mistake) => (

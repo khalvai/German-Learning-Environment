@@ -1,27 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import {
-  getCommonMistakes,
-  type CommonMistake,
-  type MistakeCategory,
-} from "../../../desktop";
+import { getCommonMistakes, type CommonMistake, type MistakeCategory } from "../../../desktop";
 
 function MistakesTable({ examples }: { examples: CommonMistake["examples"] }) {
   return (
     <table className="mx-auto w-full max-w-3xl table-auto border-collapse overflow-hidden rounded-lg border border-app-border text-sm">
       <tbody>
         {examples.map((example, index) => (
-          <tr
-            key={index}
-            className={index % 2 === 0 ? "bg-white/5" : "bg-transparent"}
-          >
-            <td className="w-[30%] px-4 py-2.5 text-red-300">
-              {example.original}
-            </td>
-            <td className=" w-[50%] px-4py-2.5 text-emerald-300">
-              {example.fix}
-            </td>
+          <tr key={index} className={index % 2 === 0 ? "bg-white/5" : "bg-transparent"}>
+            <td className="w-[30%] px-4 py-2.5 text-red-300">{example.original}</td>
+            <td className=" w-[50%] px-4py-2.5 text-emerald-300">{example.fix}</td>
             <td className="w-[20%] min-w-37.5 px-4 py-2.5 ">
               <Link
                 to={`/writings/${example.writingId}`}
@@ -67,9 +56,7 @@ export default function MistakeReview() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-2xl font-bold">
-          {mistake?.title ?? "Mistake Review"}
-        </h1>
+        <h1 className="text-2xl font-bold">{mistake?.title ?? "Mistake Review"}</h1>
       </header>
 
       <section className="p-6 ">
@@ -87,8 +74,7 @@ export default function MistakeReview() {
         ) : mistake ? (
           <>
             <p className="mb-6 text-sm text-slate-400">
-              {mistake.description}{" "}
-              <span className="text-slate-500">({mistake.count}×)</span>
+              {mistake.description} <span className="text-slate-500">({mistake.count}×)</span>
             </p>
             <MistakesTable examples={mistake.examples} />
           </>

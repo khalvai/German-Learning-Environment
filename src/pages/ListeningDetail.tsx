@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import {
-  getListening,
-  getListeningAudio,
-  updateListeningPosition,
-  type Listening,
-} from "../desktop";
+import { getListening, getListeningAudio, updateListeningPosition, type Listening } from "../desktop";
 import WaveformPlayer from "../components/WaveformPlayer";
 
 export default function ListeningDetail() {
@@ -28,7 +23,6 @@ export default function ListeningDetail() {
         if (!record) {
           setNotFound(true);
           return;
-
         }
         setListening(record);
         const audio = await getListeningAudio(id);
@@ -44,9 +38,7 @@ export default function ListeningDetail() {
   }, [id]);
 
   if (notFound) {
-    return (
-      <div className="flex h-screen items-center justify-center text-white">Audio not found</div>
-    );
+    return <div className="flex h-screen items-center justify-center text-white">Audio not found</div>;
   }
 
   return (

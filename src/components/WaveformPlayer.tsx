@@ -318,11 +318,22 @@ export default function WaveformPlayer({
           onKeyDown={(event) => {
             const audio = audioRef.current;
             if (!audio) return;
-            if (event.key === "ArrowLeft") { seekTo(audio.currentTime - 5); event.preventDefault(); }
-            else if (event.key === "ArrowRight") { seekTo(audio.currentTime + 5); event.preventDefault(); }
-            else if (event.key === "Home") { seekTo(0); event.preventDefault(); }
-            else if (event.key === "End") { seekTo(duration); event.preventDefault(); }
-            else if (event.key === " ") { togglePlay(); event.preventDefault(); }
+            if (event.key === "ArrowLeft") {
+              seekTo(audio.currentTime - 5);
+              event.preventDefault();
+            } else if (event.key === "ArrowRight") {
+              seekTo(audio.currentTime + 5);
+              event.preventDefault();
+            } else if (event.key === "Home") {
+              seekTo(0);
+              event.preventDefault();
+            } else if (event.key === "End") {
+              seekTo(duration);
+              event.preventDefault();
+            } else if (event.key === " ") {
+              togglePlay();
+              event.preventDefault();
+            }
           }}
           style={{ height }}
           className={`w-full rounded outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${ready ? "cursor-pointer" : "opacity-40"}`}

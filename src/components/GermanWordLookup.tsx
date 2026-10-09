@@ -1,10 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AlertCircle,
-  Loader2,
-  Sparkles,
-  Volume2,
-} from "lucide-react";
+import { AlertCircle, Loader2, Sparkles, Volume2 } from "lucide-react";
 import { explainWord, type ExplanationResponse } from "../desktop";
 
 /**
@@ -63,8 +58,7 @@ interface GermanWordLookupProps {
 // Wiktionary / Commons endpoints
 // ---------------------------------------------------------------------------
 
-const WIKT_HTML = (word: string) =>
-  `https://en.wiktionary.org/api/rest_v1/page/html/${encodeURIComponent(word)}`;
+const WIKT_HTML = (word: string) => `https://en.wiktionary.org/api/rest_v1/page/html/${encodeURIComponent(word)}`;
 
 const COMMONS_SEARCH = (word: string) =>
   `https://commons.wikimedia.org/w/api.php?action=query&list=search&srnamespace=6&srlimit=8&format=json&origin=*&srsearch=${encodeURIComponent(
@@ -130,9 +124,7 @@ function filenameFromUrl(url: string): string {
 
 function germanSectionNodes(doc: Document): Element[] | null {
   const headings = Array.from(doc.querySelectorAll("h2, h3, h4, h5"));
-  const startIdx = headings.findIndex(
-    (h) => h.id === "German" || h.textContent?.trim() === "German",
-  );
+  const startIdx = headings.findIndex((h) => h.id === "German" || h.textContent?.trim() === "German");
   if (startIdx === -1) return null;
 
   const allNodes = Array.from(doc.body.querySelectorAll("*"));
@@ -149,8 +141,7 @@ function parseGermanEntries(doc: Document): DictEntry[] | null {
 
   const posHeadings = nodes.filter(
     (n): n is HTMLElement =>
-      (n.tagName === "H3" || n.tagName === "H4") &&
-      /^(Noun|Verb|Adjective|Adverb)$/i.test(n.textContent?.trim() || ""),
+      (n.tagName === "H3" || n.tagName === "H4") && /^(Noun|Verb|Adjective|Adverb)$/i.test(n.textContent?.trim() || ""),
   );
 
   return posHeadings.map((posHeading) => {
@@ -181,9 +172,7 @@ function parseGermanEntries(doc: Document): DictEntry[] | null {
 function extractNounInfo(headwordText: string): NounInfo {
   const genderMatch = headwordText.match(/\b([mfn])\b(?!\w)/);
   const pluralMatch = headwordText.match(/plural\s+([A-ZÄÖÜa-zäöüß\u2011-]+)/i);
-  const genitiveMatch = headwordText.match(
-    /genitive[^,]*\s([A-ZÄÖÜa-zäöüß\u2011-]+)/i,
-  );
+  const genitiveMatch = headwordText.match(/genitive[^,]*\s([A-ZÄÖÜa-zäöüß\u2011-]+)/i);
   return {
     gender: (genderMatch?.[1] ?? null) as NounInfo["gender"],
     plural: pluralMatch?.[1] ?? null,
@@ -205,30 +194,23 @@ function extractPronunciations(doc: Document): AudioClipData[] {
   if (!nodes) return [];
 
   const pronHeading = nodes.find(
-    (n) =>
-      /^H[2-5]$/.test(n.tagName) &&
-      /^Pronunciation/i.test(n.textContent?.trim() || ""),
+    (n) => /^H[2-5]$/.test(n.tagName) && /^Pronunciation/i.test(n.textContent?.trim() || ""),
   ) as HTMLElement | undefined;
   if (!pronHeading) return [];
 
   const clips: AudioClipData[] = [];
   let node = pronHeading.nextElementSibling as HTMLElement | null;
   while (node && !/^H[2-5]$/.test(node.tagName)) {
-    const items =
-      node.tagName === "LI" ? [node] : Array.from(node.querySelectorAll("li"));
+    const items = node.tagName === "LI" ? [node] : Array.from(node.querySelectorAll("li"));
     items.forEach((li) => {
       const audioEl = li.querySelector("audio");
-      const src =
-        audioEl?.querySelector("source")?.getAttribute("src") ||
-        audioEl?.getAttribute("src");
+      const src = audioEl?.querySelector("source")?.getAttribute("src") || audioEl?.getAttribute("src");
       if (!src) return;
 
       const url = fixProtocolRelative(src);
       let region = li.querySelector(".ib-content")?.textContent?.trim() || null;
       if (!region) {
-        const matches = Array.from(
-          (li.textContent || "").matchAll(/\(([^)]+)\)/g),
-        ).map((m) => m[1].trim());
+        const matches = Array.from((li.textContent || "").matchAll(/\(([^)]+)\)/g)).map((m) => m[1].trim());
         region = matches.find((m) => m.toLowerCase() !== "key") || null;
       }
       clips.push({ url, region, title: filenameFromUrl(url) });
@@ -237,26 +219,17 @@ function extractPronunciations(doc: Document): AudioClipData[] {
   }
 
   const seen = new Set<string>();
-  return clips.filter((c) =>
-    seen.has(c.url) ? false : (seen.add(c.url), true),
-  );
+  return clips.filter((c) => (seen.has(c.url) ? false : (seen.add(c.url), true)));
 }
 
 /** Fallback when the page has no in-context Pronunciation audio to parse — can't be region-labeled. */
-async function fetchAudioClipsFromCommons(
-  word: string,
-): Promise<AudioClipData[]> {
+async function fetchAudioClipsFromCommons(word: string): Promise<AudioClipData[]> {
   const searchRes = await safeFetch(COMMONS_SEARCH(word), "Commons search");
   if (!searchRes.ok) return [];
-  const titles: string[] = ((await searchRes.json())?.query?.search || []).map(
-    (r: { title: string }) => r.title,
-  );
+  const titles: string[] = ((await searchRes.json())?.query?.search || []).map((r: { title: string }) => r.title);
   if (titles.length === 0) return [];
 
-  const infoRes = await safeFetch(
-    COMMONS_IMAGEINFO(titles),
-    "Commons imageinfo",
-  );
+  const infoRes = await safeFetch(COMMONS_IMAGEINFO(titles), "Commons imageinfo");
   if (!infoRes.ok) return [];
   type CommonsPage = { title?: string; imageinfo?: { url?: string }[] };
   const pages: Record<string, CommonsPage> = (await infoRes.json())?.query?.pages || {};
@@ -278,10 +251,7 @@ async function fetchWiktionaryData(word: string): Promise<LookupResult> {
         : `Wiktionary request failed (HTTP ${htmlRes.status}).`,
     );
   }
-  const doc = new DOMParser().parseFromString(
-    await htmlRes.text(),
-    "text/html",
-  );
+  const doc = new DOMParser().parseFromString(await htmlRes.text(), "text/html");
   const entries = parseGermanEntries(doc);
   if (!entries || entries.length === 0) {
     throw new Error(`No German-language entry found for "${word}".`);
@@ -291,10 +261,7 @@ async function fetchWiktionaryData(word: string): Promise<LookupResult> {
   return {
     word,
     entries,
-    audio:
-      audio.length > 0
-        ? audio
-        : await fetchAudioClipsFromCommons(word).catch(() => []),
+    audio: audio.length > 0 ? audio : await fetchAudioClipsFromCommons(word).catch(() => []),
   };
 }
 
@@ -317,9 +284,7 @@ function AudioPill({ url, title, region }: AudioClipData) {
           : "bg-[#2e2e38] border-[#3e3e4a] text-slate-200 hover:bg-[#3a3a46] hover:border-[#4a4a58]"
       }`}
     >
-      <Volume2
-        className={`w-3.5 h-3.5 shrink-0 ${isPlaying ? "text-indigo-300" : "text-slate-400"}`}
-      />
+      <Volume2 className={`w-3.5 h-3.5 shrink-0 ${isPlaying ? "text-indigo-300" : "text-slate-400"}`} />
       {region && <span className="leading-none">{regionFlag(region)}</span>}
       <span className="leading-none">{region ?? "Listen"}</span>
       <audio
@@ -338,9 +303,7 @@ function GrammarRow({ entry }: { entry: DictEntry }) {
   if (entry.pos === "Noun") {
     const noun = extractNounInfo(entry.headwordText);
     if (!noun.gender && !noun.plural) {
-      return (
-        <p className="text-xs italic text-slate-500">{entry.headwordText}</p>
-      );
+      return <p className="text-xs italic text-slate-500">{entry.headwordText}</p>;
     }
     return (
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-300">
@@ -353,9 +316,7 @@ function GrammarRow({ entry }: { entry: DictEntry }) {
   if (entry.pos === "Verb") {
     const forms = extractVerbInfo(entry.headwordText);
     if (forms.length === 0) {
-      return (
-        <p className="text-xs italic text-slate-500">{entry.headwordText}</p>
-      );
+      return <p className="text-xs italic text-slate-500">{entry.headwordText}</p>;
     }
     return (
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-300">
@@ -375,11 +336,7 @@ function GrammarRow({ entry }: { entry: DictEntry }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function GermanWordLookup({
-  selectedWord,
-  contextSentence,
-  onClose,
-}: GermanWordLookupProps) {
+export default function GermanWordLookup({ selectedWord, contextSentence, onClose }: GermanWordLookupProps) {
   const [input, setInput] = useState(selectedWord);
 
   const [error, setError] = useState<string | null>(null);
@@ -387,9 +344,7 @@ export default function GermanWordLookup({
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [explanation, setExplanation] = useState<ExplanationResponse | null>(
-    null,
-  );
+  const [explanation, setExplanation] = useState<ExplanationResponse | null>(null);
 
   const lookup = useCallback(async (rawWord: string) => {
     const word = rawWord.trim();
@@ -403,20 +358,17 @@ export default function GermanWordLookup({
     }
   }, []);
 
-  const requestAiExplanation = useCallback(
-    async (word: string, sentence: string | null) => {
-      setAiLoading(true);
-      setAiError(null);
-      try {
-        setExplanation(await explainWord(word, sentence));
-      } catch (e) {
-        setAiError(e instanceof Error ? e.message : "AI explanation failed.");
-      } finally {
-        setAiLoading(false);
-      }
-    },
-    [],
-  );
+  const requestAiExplanation = useCallback(async (word: string, sentence: string | null) => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      setExplanation(await explainWord(word, sentence));
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "AI explanation failed.");
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setInput(selectedWord);
@@ -475,14 +427,9 @@ export default function GermanWordLookup({
       {result && (
         <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
           {result.entries.map((entry, i) => (
-            <div
-              key={i}
-              className="border-t border-[#3e3e4a] pt-3 first:border-t-0 first:pt-0 space-y-1.5"
-            >
+            <div key={i} className="border-t border-[#3e3e4a] pt-3 first:border-t-0 first:pt-0 space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                  {entry.pos}
-                </span>
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">{entry.pos}</span>
               </div>
               <GrammarRow entry={entry} />
               {entry.definitions.length > 0 && (
@@ -510,11 +457,7 @@ export default function GermanWordLookup({
             disabled={aiLoading || !input?.trim()}
             className="px-3 py-2 rounded-lg bg-indigo-500 text-white text-sm font-medium disabled:opacity-40 flex items-center gap-2"
           >
-            {aiLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5" />
-            )}
+            {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
           </button>
         </form>
 
@@ -538,12 +481,9 @@ export default function GermanWordLookup({
               <div className="flex gap-2">
                 <p>
                   {" "}
-                  {explanation.grammar?.noun?.article}{" "}
-                  {explanation.grammar?.noun?.singular},
+                  {explanation.grammar?.noun?.article} {explanation.grammar?.noun?.singular},
                 </p>
-                {explanation.grammar?.noun?.plural && (
-                  <p> die {explanation.grammar?.noun?.plural}</p>
-                )}
+                {explanation.grammar?.noun?.plural && <p> die {explanation.grammar?.noun?.plural}</p>}
               </div>
             )}
 
@@ -553,9 +493,7 @@ export default function GermanWordLookup({
                 <p> {explanation.grammar?.verb?.presentThirdPerson},</p>
                 <p> {explanation.grammar?.verb?.präteritumThirdPerson},</p>
                 <p>
-                  {explanation.grammar?.verb?.perfectAuxiliary === "haben"
-                    ? "hat"
-                    : "ist"}{" "}
+                  {explanation.grammar?.verb?.perfectAuxiliary === "haben" ? "hat" : "ist"}{" "}
                   {explanation.grammar?.verb?.perfectParticiple}
                 </p>
               </div>

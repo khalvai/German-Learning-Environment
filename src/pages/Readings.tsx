@@ -5,13 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ContentLibrary from "../components/ContentLibrary";
 
-function ReadingCard({
-  reading,
-  onRemove,
-}: {
-  reading: Reading;
-  onRemove: () => Promise<void>;
-}) {
+function ReadingCard({ reading, onRemove }: { reading: Reading; onRemove: () => Promise<void> }) {
   return (
     <div className="group relative flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg">
       <button
@@ -26,21 +20,12 @@ function ReadingCard({
         <Trash className="w-4 h-4" />
       </button>
 
-      <Link
-        to={`/reading/${reading.id}`}
-        className="flex flex-col w-full h-full"
-      >
-        <h2 className="text-base font-medium mb-2 line-clamp-2">
-          {reading.title}
-        </h2>
+      <Link to={`/reading/${reading.id}`} className="flex flex-col w-full h-full">
+        <h2 className="text-base font-medium mb-2 line-clamp-2">{reading.title}</h2>
 
-        <pre className="line-clamp-6 text-sm text-gray-400 whitespace-pre-wrap flex-1">
-          {reading.originalText}
-        </pre>
+        <pre className="line-clamp-6 text-sm text-gray-400 whitespace-pre-wrap flex-1">{reading.originalText}</pre>
 
-        <p className="text-gray-500 text-xs mt-auto pt-2">
-          {reading.createdAt.toLocaleString()}
-        </p>
+        <p className="text-gray-500 text-xs mt-auto pt-2">{reading.createdAt.toLocaleString()}</p>
       </Link>
     </div>
   );
@@ -74,9 +59,7 @@ export default function Reading() {
           onRemove={async () => {
             try {
               await removeReading(reading.id);
-              setReadings((prev) =>
-                prev.filter((item) => item.id !== reading.id),
-              );
+              setReadings((prev) => prev.filter((item) => item.id !== reading.id));
             } catch {
               setError(`Could not delete “${reading.title}”.`);
             }

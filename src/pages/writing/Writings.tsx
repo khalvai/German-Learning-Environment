@@ -1,22 +1,10 @@
 import { useEffect, useState } from "react";
-import {
-  getWritings,
-  removeWriting,
-  getRecentMistakes,
-  type Writing,
-  type RecentMistake,
-} from "../../desktop";
+import { getWritings, removeWriting, getRecentMistakes, type Writing, type RecentMistake } from "../../desktop";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash } from "lucide-react";
 import ContentLibrary from "../../components/ContentLibrary";
 
-function WritingCard({
-  writing,
-  onRemove,
-}: {
-  writing: Writing;
-  onRemove: () => Promise<void>;
-}) {
+function WritingCard({ writing, onRemove }: { writing: Writing; onRemove: () => Promise<void> }) {
   return (
     <div className="group flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg relative">
       <button
@@ -31,21 +19,12 @@ function WritingCard({
         <Trash className="w-4 h-4" />
       </button>
 
-      <Link
-        to={`/writings/${writing.id}`}
-        className="flex flex-col w-full h-full"
-      >
-        <h2 className="text-base font-medium mb-2 line-clamp-2">
-          {writing.title}
-        </h2>
+      <Link to={`/writings/${writing.id}`} className="flex flex-col w-full h-full">
+        <h2 className="text-base font-medium mb-2 line-clamp-2">{writing.title}</h2>
 
-        <pre className="text-sm text-gray-400 whitespace-pre-wrap py-2 flex-1 overflow-hidden ">
-          {writing.content}
-        </pre>
+        <pre className="text-sm text-gray-400 whitespace-pre-wrap py-2 flex-1 overflow-hidden ">{writing.content}</pre>
 
-        <p className="text-gray-500 text-xs pt-2">
-          {writing.createdAt.toLocaleString()}
-        </p>
+        <p className="text-gray-500 text-xs pt-2">{writing.createdAt.toLocaleString()}</p>
       </Link>
     </div>
   );
@@ -62,13 +41,9 @@ function RecentMistakeCard({ mistake }: { mistake: RecentMistake }) {
       <h3 className="mb-2 text-sm font-medium">{mistake.categoryTitle}</h3>
       <p className="text-xs leading-5">
         <span className="text-red-300 line-through">{mistake.original}</span>
-        {mistake.fix && (
-          <span className="ml-1.5 text-emerald-300">{mistake.fix}</span>
-        )}
+        {mistake.fix && <span className="ml-1.5 text-emerald-300">{mistake.fix}</span>}
       </p>
-      <p className="mt-2 text-xs leading-5 text-slate-400">
-        {mistake.explanation}
-      </p>
+      <p className="mt-2 text-xs leading-5 text-slate-400">{mistake.explanation}</p>
     </Link>
   );
 }
@@ -79,11 +54,9 @@ function RecentMistakesSection({ mistakes }: { mistakes: RecentMistake[] }) {
       <h2 className="mb-4 text-lg font-semibold">Recent Mistakes</h2>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        {mistakes
-          .slice(0, MAX_RECENT_MISTAKES_IN_SUMMARY)
-          .map((mistake, index) => (
-            <RecentMistakeCard key={index} mistake={mistake} />
-          ))}
+        {mistakes.slice(0, MAX_RECENT_MISTAKES_IN_SUMMARY).map((mistake, index) => (
+          <RecentMistakeCard key={index} mistake={mistake} />
+        ))}
       </div>
     </div>
   );
@@ -118,11 +91,7 @@ export default function Writings() {
       loading={loading}
       error={error}
       onCreate={() => navigate("/writings/new")}
-      beforeContent={
-        recentMistakes.length > 0 ? (
-          <RecentMistakesSection mistakes={recentMistakes} />
-        ) : undefined
-      }
+      beforeContent={recentMistakes.length > 0 ? <RecentMistakesSection mistakes={recentMistakes} /> : undefined}
     >
       {writings.map((writing) => (
         <WritingCard
@@ -131,9 +100,7 @@ export default function Writings() {
           onRemove={async () => {
             try {
               await removeWriting(writing.id);
-              setWritings((prev) =>
-                prev.filter((item) => item.id !== writing.id),
-              );
+              setWritings((prev) => prev.filter((item) => item.id !== writing.id));
             } catch {
               setError(`Could not delete “${writing.title}”.`);
             }

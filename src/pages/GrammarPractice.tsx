@@ -106,8 +106,7 @@ function ExerciseCard({
           {(exercise.options ?? []).map((option) => {
             const isRevealed = answer.phase !== "answering";
             const isCorrectOption = option === exercise.correctAnswer;
-            const isPicked =
-              answer.phase === "revealed" && answer.picked === option;
+            const isPicked = answer.phase === "revealed" && answer.picked === option;
             return (
               <button
                 key={option}
@@ -150,10 +149,7 @@ function ExerciseCard({
           {settled && (
             <div className="rounded-lg border border-app-border bg-white/5 p-3 text-sm">
               <p className="text-slate-400">
-                Reference answer:{" "}
-                <span className="text-emerald-300">
-                  {exercise.correctAnswer}
-                </span>
+                Reference answer: <span className="text-emerald-300">{exercise.correctAnswer}</span>
               </p>
             </div>
           )}
@@ -210,8 +206,7 @@ function ExerciseCard({
 
 export default function GrammarPractice() {
   const [searchParams] = useSearchParams();
-  const category =
-    (searchParams.get("category") as MistakeCategory | null) ?? undefined;
+  const category = (searchParams.get("category") as MistakeCategory | null) ?? undefined;
 
   const [exercises, setExercises] = useState<GrammarExercise[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,11 +229,7 @@ export default function GrammarPractice() {
     setGradingError(null);
     generateGrammarExercises(category)
       .then((set) => setExercises(set.exercises))
-      .catch((err) =>
-        setError(
-          typeof err === "string" ? err : "Could not generate exercises.",
-        ),
-      )
+      .catch((err) => setError(typeof err === "string" ? err : "Could not generate exercises."))
       .finally(() => setLoading(false));
   }, [category]);
 
@@ -292,16 +283,10 @@ export default function GrammarPractice() {
   return (
     <main className="min-h-screen">
       <header className="flex h-16 items-center gap-3 border-b border-app-border px-6">
-        <Link
-          to="/grammar"
-          aria-label="Back to Grammar"
-          className="text-slate-400 transition hover:text-slate-200"
-        >
+        <Link to="/grammar" aria-label="Back to Grammar" className="text-slate-400 transition hover:text-slate-200">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-2xl font-bold">
-          {category ? MISTAKE_CATEGORY_LABELS[category] : "Practice"}
-        </h1>
+        <h1 className="text-2xl font-bold">{category ? MISTAKE_CATEGORY_LABELS[category] : "Practice"}</h1>
         {exercises && !loading && index < exercises.length && (
           <span className="ml-auto text-sm text-slate-400">
             {index + 1} / {exercises.length}
@@ -331,11 +316,7 @@ export default function GrammarPractice() {
           )
         )}
 
-        {loading && (
-          <p className="p-4 text-slate-400">
-            Generating exercises based on your mistakes…
-          </p>
-        )}
+        {loading && <p className="p-4 text-slate-400">Generating exercises based on your mistakes…</p>}
 
         {!loading && exercises && current && (
           <ExerciseCard
@@ -357,9 +338,7 @@ export default function GrammarPractice() {
               {correctCount} / {exercises.length} correct
             </h2>
             <p className="mb-5 text-sm text-slate-400">
-              {correctCount === exercises.length
-                ? "Perfect run — nice work."
-                : "Keep drilling this to make it stick."}
+              {correctCount === exercises.length ? "Perfect run — nice work." : "Keep drilling this to make it stick."}
             </p>
             <div className="flex justify-center gap-3">
               <Button onClick={load} className="gap-1.5">

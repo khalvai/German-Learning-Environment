@@ -5,13 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ContentLibrary from "../components/ContentLibrary";
 
-function ListeningCard({
-  listening,
-  onRemove,
-}: {
-  listening: Listening;
-  onRemove: () => Promise<void>;
-}) {
+function ListeningCard({ listening, onRemove }: { listening: Listening; onRemove: () => Promise<void> }) {
   return (
     <div className="group relative flex flex-col items-center p-4 h-[260px] w-[195px] border app-card rounded-lg">
       <button

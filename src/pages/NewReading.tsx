@@ -41,10 +41,16 @@ export default function NewReading() {
       </nav>
 
       <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6 p-6">
-        {error && <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p>}
+        {error && (
+          <p className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">
+            {error}
+          </p>
+        )}
 
         <div>
-          <label htmlFor="reading-title" className="mb-1 block text-sm text-gray-400">Title</label>
+          <label htmlFor="reading-title" className="mb-1 block text-sm text-gray-400">
+            Title
+          </label>
           <input
             id="reading-title"
             type="text"
@@ -57,7 +63,9 @@ export default function NewReading() {
         </div>
 
         <div>
-          <label htmlFor="reading-text" className="mb-1 block text-sm text-gray-400">German text</label>
+          <label htmlFor="reading-text" className="mb-1 block text-sm text-gray-400">
+            German text
+          </label>
           <textarea
             id="reading-text"
             value={originalText}
@@ -70,20 +78,12 @@ export default function NewReading() {
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <Button
-            disabled={saving}
-            type="submit"
-            className=""
-          >
+          <Button disabled={saving} type="submit" className="">
             <Save className="h-4 w-4" />
             Save
           </Button>
 
-          <Button
-            disabled={false}
-            onClick={() => navigate("/reading")}
-            className=""
-          >
+          <Button disabled={false} onClick={() => navigate("/reading")} className="">
             Cancel
           </Button>
         </div>
