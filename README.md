@@ -1,8 +1,6 @@
-# Environment 🇩🇪
+# German Learning Environment(minimalist)
 
-Something tha I needed for learning German :)
-
-It runs natively on your machine and keeps everything — your texts, your essays, your mistakes — in a local database. No account, no cloud sync. The only network calls it makes are to an LLM (via [OpenRouter](https://openrouter.ai/) or the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway)) for the AI-powered bits, and to Wiktionary for dictionary lookups.
+Something that I needed for learning German :)
 
 I'm building this for my own daily use, so it's opinionated and still rough around the edges in places. Sharing it in case it's useful to someone else learning German too.
 
