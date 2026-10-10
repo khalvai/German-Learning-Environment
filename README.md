@@ -5,30 +5,25 @@ Something that I needed for learning German :)
 ## What it actually does
 
 ### ✍️ Writing
+
 I needed a writing environment(apart from Google Docs, why not? having my own dictation mode)
 
 You can simply start writing, by a click.
+
 - on the right your essay points that you should address (questions)
 - on the left your master of art :)
 
-
 ![Writing editor](docs/screenshots/05-writing-editor.png)
-
-
 
 When clicked on analyze button, it turns out:
 
 ![Writing dictation mode](docs/screenshots/06-writings-dictation-mode.png)
-
-
 
 ### 🎧 🗣️ Listening
 
 I always needed a audio play with Waves, so I can move back and forward over and over to hear the exact connected speech. What if the AI gives us the transcript of the Audio and then we can recheck?
 
 ![Listening](docs/screenshots/07-listening.png)
-
-
 
 ## Getting started
 
