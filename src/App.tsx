@@ -1,12 +1,6 @@
 import "./App.css";
 import { useEffect } from "react";
-import {
-  HashRouter,
-  Routes,
-  Route,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { HashRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 
 import Home from "./pages/Home";
 import Listening from "./pages/Listening";
@@ -34,12 +28,7 @@ function BackspaceBack() {
       if (e.key !== "Backspace" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (location.pathname === "/") return;
       const el = e.target as HTMLElement | null;
-      if (
-        el &&
-        (el.isContentEditable ||
-          ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))
-      )
-        return;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
       e.preventDefault();
       navigate(-1);
     };

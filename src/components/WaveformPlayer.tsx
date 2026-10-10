@@ -206,7 +206,6 @@ export default function WaveformPlayer({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioBase64, fileName]);
 
   // Single redraw path — fires on any state the drawing depends on.
