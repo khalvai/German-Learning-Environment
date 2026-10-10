@@ -2,7 +2,6 @@
 
 Something that I needed for learning German :)
 
-## What it actually does
 
 ### ✍️ Writing
 
