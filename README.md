@@ -2,79 +2,38 @@
 
 Something that I needed for learning German :)
 
-I'm building this for my own daily use, so it's opinionated and still rough around the edges in places. Sharing it in case it's useful to someone else learning German too.
-
 ## What it actually does
 
-### 📖 Reading
-
-Paste in any German text — an article, a story, whatever you're reading — and it's saved to your personal library.
-
-![Reading library](docs/screenshots/02-reading-library.png)
-
-Open one up and double-click any word to look it up. This isn't an AI guess — it pulls real definitions, gender/plural forms, verb conjugations, and pronunciation audio straight from Wiktionary. If you want more than the dictionary definition, there's a separate "Explain with AI" option that explains what the word means _in that specific sentence_, with fresh examples.
-
-![Word lookup panel](docs/screenshots/03-reading-vocabulary.png)
-
 ### ✍️ Writing
+I needed a writing environment(apart from Google Docs, why not? having my own dictation mode)
 
-image.png
-Create a topic (or write freely), and get a proper split-pane editor — your essay on one side, the prompt on the other — with a running timer so you know how long you actually spent.
+You can simply start writing, by a click.
+- on the right your essay points that you should address (questions)
+- on the left your master of art :)
+
 
 ![Writing editor](docs/screenshots/05-writing-editor.png)
 
-Hit "Analyze" and an LLM reads your essay like a strict-but-fair teacher: it scores you on grammar, vocabulary, and structure, marks up your original text inline (strikethrough + correction, hover for the explanation), and rewrites the whole thing as a polished version so you can see what "good" looks like.
 
-Every writing library also surfaces your **recent mistakes** at a glance, so patterns jump out instead of getting buried in feedback you'll forget by next week.
 
-![Writings library with recent mistakes](docs/screenshots/04-writings-library.png)
+When clicked on analyze button, it turns out:
 
-### 🧠 Grammar (the part I actually built this whole app for)
+![Writing dictation mode](docs/screenshots/06-writings-dictation-mode.png)
 
-This is the reason the app exists. Every mistake the AI catches in your writing doesn't just sit in a feedback panel — it gets tracked, categorized (word order, case agreement, prepositions, etc.), and scheduled for review using spaced repetition, Anki-style.
 
-![Grammar overview with due counts](docs/screenshots/06-grammar-overview.png)
 
-When something's due, you drill it — but not with the same sentence you got wrong before. The AI generates _fresh_ exercises targeting that specific weakness, grades your free-text answers automatically, and reschedules the next review based on how well you knew it.
+### 🎧 🗣️ Listening
 
-![Grammar practice exercise](docs/screenshots/07-grammar-practice.png)
+I always needed a audio play with Waves, so I can move back and forward over and over to hear the exact connected speech. What if the AI gives us the transcript of the Audio and then we can recheck?
 
-In other words: your own writing mistakes become your flashcards.
+![Listening](docs/screenshots/07-listening.png)
 
-### 🏠 Everything starts here
 
-One screen, five skills, and a place to drop in your API keys (stored securely on-device, never anywhere else).
-
-![Home screen](docs/screenshots/01-home.png)
-
-### 🎧 🗣️ Listening & Speaking
-
-Not built yet. They're on the home screen as a reminder of where this is headed, but there's no functionality behind them today.
 
 ## Getting started
 
-You'll need [Rust](https://www.rust-lang.org/tools/install), [Node.js](https://nodejs.org/), and [pnpm](https://pnpm.io/).
+1. Download the installer for your system from the [Releases](https://github.com/khalvai/environment/releases) page and install it.
+2. Get a free API key from [Groq](https://console.groq.com/keys): sign in, open **API Keys**, click **Create API Key**, and copy the key (it starts with `gsk_`).
+3. Open the app. On the home page, paste the key into the **Groq API key** card and click **Save key**.
 
-```bash
-pnpm install
-pnpm tauri dev
-```
-
-To build a release binary:
-
-```bash
-pnpm tauri build
-```
-
-You'll need a [Groq](https://console.groq.com/keys) API key for the AI features — the app will prompt you for it on first run and store it securely on your device.
-
-## Tech stack
-
-- **Frontend:** React 19, React Router, Tailwind CSS
-- **Backend:** Rust via Tauri 2
-- **AI:** Groq — Llama for feedback and explanations, Whisper for transcripts (bring your own key)
-- **Dictionary data:** Wiktionary & Wikimedia Commons (for pronunciation audio)
-
-## Status
-
-Actively used and actively changing. Reading, Writing, and Grammar are real and working; Listening and Speaking are placeholders for now.
+The key is stored in your system keyring on your own device, and the app only uses it to call Groq for writing analysis, word explanations and audio transcripts. To change it, remove the saved key from the same card and add a new one.
