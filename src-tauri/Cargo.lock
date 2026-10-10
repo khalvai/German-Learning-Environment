@@ -963,7 +963,7 @@ dependencies = [
 
 [[package]]
 name = "environment"
-version = "0.2.8"
+version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
