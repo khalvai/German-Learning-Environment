@@ -46,7 +46,7 @@ fn remove_api_key() -> Result<(), String> {
     }
 }
 
-const GROQ_CHAT_MODEL: &str = "llama-3.3-70b-versatile";
+const GROQ_CHAT_MODEL: &str = "openai/gpt-oss-120b";
 const GROQ_TRANSCRIPTION_MODEL: &str = "whisper-large-v3";
 const GROQ_CHAT_URL: &str = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_TRANSCRIPTION_URL: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -74,7 +74,7 @@ async fn groq_json(system: &str, prompt: String) -> Result<serde_json::Value, St
                 { "role": "user", "content": prompt }
             ],
             "response_format": { "type": "json_object" },
-            "max_completion_tokens": 4000
+            "max_completion_tokens": 8000
         }))
         .send()
         .await
