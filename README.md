@@ -66,13 +66,13 @@ To build a release binary:
 pnpm tauri build
 ```
 
-You'll need an [OpenRouter](https://openrouter.ai/) API key (and optionally a Vercel AI Gateway key) for the AI features — the app will prompt you for these on first run and store them securely on your device.
+You'll need a [Groq](https://console.groq.com/keys) API key for the AI features — the app will prompt you for it on first run and store it securely on your device.
 
 ## Tech stack
 
 - **Frontend:** React 19, React Router, Tailwind CSS
 - **Backend:** Rust via Tauri 2
-- **AI:** OpenRouter / Vercel AI Gateway (bring your own key)
+- **AI:** Groq — Llama for feedback and explanations, Whisper for transcripts (bring your own key)
 - **Dictionary data:** Wiktionary & Wikimedia Commons (for pronunciation audio)
 
 ## Status
