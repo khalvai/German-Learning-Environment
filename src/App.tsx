@@ -1,5 +1,12 @@
 import "./App.css";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  HashRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import Home from "./pages/Home";
 import Listening from "./pages/Listening";
@@ -18,9 +25,35 @@ import NewReading from "./pages/NewReading";
 import MistakesIndex from "./pages/writing/mistakes/MistakesIndex";
 import MistakeReview from "./pages/writing/mistakes/MistakeReview";
 
+function BackspaceBack() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Backspace" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (location.pathname === "/") return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el &&
+        (el.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))
+      )
+        return;
+      e.preventDefault();
+      navigate(-1);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navigate, location.pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <HashRouter>
+      <BackspaceBack />
       <Routes>
         <Route path="/" element={<Home />} />
 

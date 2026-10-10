@@ -44,6 +44,7 @@ export default function WritingTopics() {
   return (
     <ContentLibrary
       title="Writing Topics"
+      backTo="/writings"
       itemLabel="topic"
       loading={loading}
       error={error}

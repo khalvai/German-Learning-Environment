@@ -46,52 +46,52 @@ fn remove_api_key() -> Result<(), String> {
     }
 }
 
-const OPENROUTER_MODEL: &str = "google/gemma-4-31b-it";
+const GROQ_CHAT_MODEL: &str = "llama-3.3-70b-versatile";
+const GROQ_TRANSCRIPTION_MODEL: &str = "whisper-large-v3";
+const GROQ_CHAT_URL: &str = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_TRANSCRIPTION_URL: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
+const MAX_TRANSCRIBE_BYTES: usize = 24 * 1024 * 1024;
 
-async fn openrouter_json(system: &str, prompt: String) -> Result<serde_json::Value, String> {
+/// Turns a failed Groq response into a readable error and logs the raw body to the terminal.
+fn groq_error(status: reqwest::StatusCode, body: &serde_json::Value) -> String {
+    eprintln!(
+        "[groq] request failed, status {status}: {}",
+        serde_json::to_string_pretty(body).unwrap_or_else(|_| body.to_string())
+    );
+    let message = body["error"]["message"].as_str().unwrap_or("Groq request failed.");
+    format!("{message} ({status})")
+}
+
+async fn groq_json(system: &str, prompt: String) -> Result<serde_json::Value, String> {
     let api_key = read_api_key()?;
     let response = reqwest::Client::new()
-        .post("https://openrouter.ai/api/v1/chat/completions")
+        .post(GROQ_CHAT_URL)
         .bearer_auth(api_key)
-        .header("HTTP-Referer", "https://github.com/khalvai/environment")
-        .header("X-Title", "German Learning Environment")
         .json(&serde_json::json!({
-            "model": OPENROUTER_MODEL,
+            "model": GROQ_CHAT_MODEL,
             "messages": [
                 { "role": "system", "content": system },
                 { "role": "user", "content": prompt }
             ],
             "response_format": { "type": "json_object" },
-            "max_tokens": 2000
+            "max_completion_tokens": 4000
         }))
         .send()
         .await
-        .map_err(|error| format!("Could not reach OpenRouter: {error}"))?;
+        .map_err(|error| format!("Could not reach Groq: {error}"))?;
 
     let status = response.status();
     let body: serde_json::Value = response
         .json()
         .await
-        .map_err(|error| format!("Invalid response from OpenRouter: {error}"))?;
+        .map_err(|error| format!("Invalid response from Groq: {error}"))?;
     if !status.is_success() {
-        eprintln!(
-            "[openrouter] request failed, status {status}: {}",
-            serde_json::to_string_pretty(&body).unwrap_or_else(|_| body.to_string())
-        );
-        let message = body["error"]["message"].as_str().unwrap_or("OpenRouter request failed.");
-        let metadata = &body["error"]["metadata"];
-        let detail = metadata["raw"].as_str().map(str::to_string).or_else(|| {
-            (!metadata.is_null()).then(|| metadata.to_string())
-        });
-        return Err(match detail {
-            Some(detail) => format!("{message} ({status}): {detail}"),
-            None => format!("{message} ({status})"),
-        });
+        return Err(groq_error(status, &body));
     }
 
     let content = body["choices"][0]["message"]["content"]
         .as_str()
-        .ok_or_else(|| "OpenRouter returned no response content.".to_string())?;
+        .ok_or_else(|| "Groq returned no response content.".to_string())?;
     let trimmed = content.trim();
     let json_text = trimmed
         .strip_prefix("```json")
@@ -100,7 +100,78 @@ async fn openrouter_json(system: &str, prompt: String) -> Result<serde_json::Val
         .unwrap_or(trimmed)
         .trim();
     serde_json::from_str(json_text)
-        .map_err(|error| format!("OpenRouter returned malformed JSON: {error}. Raw: {json_text}"))
+        .map_err(|error| format!("Groq returned malformed JSON: {error}. Raw: {json_text}"))
+}
+
+/// Transcribes a saved listening clip with Groq's Whisper and stores timestamped
+/// segments in the clip's markdown record.
+#[tauri::command]
+async fn transcribe_listening(app: tauri::AppHandle, id: String) -> Result<Vec<storage::TranscriptSegment>, String> {
+    let (path, extension) = storage::listening_audio_file(&app, &id)?;
+    let mime = match extension.as_str() {
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "m4a" | "mp4" => "audio/mp4",
+        "ogg" | "oga" | "opus" => "audio/ogg",
+        "flac" => "audio/flac",
+        "webm" => "audio/webm",
+        other => return Err(format!("Transcription does not support .{other} files. Use mp3, wav, m4a, ogg, flac or webm.")),
+    };
+    let bytes = std::fs::read(&path).map_err(|error| error.to_string())?;
+    if bytes.len() > MAX_TRANSCRIBE_BYTES {
+        return Err("This audio is larger than 24 MB. Trim or compress it before transcribing.".into());
+    }
+
+    let api_key = read_api_key()?;
+    let part = reqwest::multipart::Part::bytes(bytes)
+        .file_name(format!("audio.{extension}"))
+        .mime_str(mime)
+        .map_err(|error| error.to_string())?;
+    let form = reqwest::multipart::Form::new()
+        .part("file", part)
+        .text("model", GROQ_TRANSCRIPTION_MODEL)
+        .text("language", "de")
+        .text("response_format", "verbose_json")
+        .text("timestamp_granularities[]", "segment")
+        .text("temperature", "0");
+
+    let response = reqwest::Client::new()
+        .post(GROQ_TRANSCRIPTION_URL)
+        .bearer_auth(api_key)
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach Groq: {error}"))?;
+    let status = response.status();
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|error| format!("Invalid response from Groq: {error}"))?;
+    if !status.is_success() {
+        return Err(groq_error(status, &body));
+    }
+
+    let mut segments: Vec<storage::TranscriptSegment> = body["segments"]
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| {
+                    Some(storage::TranscriptSegment {
+                        start: item["start"].as_f64()?,
+                        end: item["end"].as_f64()?,
+                        text: item["text"].as_str()?.trim().to_string(),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    segments.retain(|segment| !segment.text.is_empty());
+    if segments.is_empty() {
+        return Err("No speech was found in this audio.".into());
+    }
+    storage::save_listening_transcript(&app, &id, segments.clone())?;
+    Ok(segments)
 }
 
 #[tauri::command]
@@ -112,7 +183,7 @@ A mistake that does not cleanly match the array's own theme (for example a regis
 Be encouraging, distinguish actual mistakes from optional improvements, and use simple English.",
         storage::mistake_categories_prompt()
     );
-    openrouter_json(&system, format!("Question to address:\n{question}\n\nWriting:\n{content}")).await
+    groq_json(&system, format!("Question to address:\n{question}\n\nWriting:\n{content}")).await
 }
 
 #[tauri::command]
@@ -120,7 +191,7 @@ async fn explain_word(word: String, context_sentence: Option<String>) -> Result<
     if word.trim().is_empty() {
         return Err("The word cannot be empty.".into());
     }
-    openrouter_json(
+    groq_json(
         "You are a German teacher. Return valid JSON only with: partOfSpeech, grammar (optional noun/verb/adjective objects), definitions (string[]), meaningInContext (optional string), exampleSentenceGerman, exampleSentenceEnglish. Explain in simple English. For nouns include article, singular, plural. For verbs include infinitive, presentThirdPerson, präteritumThirdPerson, perfectParticiple, perfectAuxiliary. For adjectives include comparative and superlative.",
         format!("Analyze the German word {word:?}. Context sentence: {}", context_sentence.unwrap_or_else(|| "No context sentence provided.".into())),
     )
@@ -198,7 +269,7 @@ containing exactly one exercise per numbered mistake, in the same order as the l
 Set each exercise's category field to exactly the slug given for its numbered mistake. \
 For fill_blank, sentence must contain a blank marked ___. For correction, sentence is a sentence containing a mistake of that type for the student to fix, and correctAnswer is the corrected sentence. Keep German at A2-B1 level and write instruction/explanation text in simple English.";
 
-    let mut result = openrouter_json(system, format!("Mistakes:\n{numbered}")).await?;
+    let mut result = groq_json(system, format!("Mistakes:\n{numbered}")).await?;
 
     if let Some(exercises) = result.get_mut("exercises").and_then(|value| value.as_array_mut()) {
         for (exercise, mistake) in exercises.iter_mut().zip(due.iter()) {
@@ -258,7 +329,7 @@ Do not penalize minor differences in wording, capitalization style, or alternati
         "Exercise instruction: {instruction}\nSentence: {sentence}\nReference answer: {reference_answer}\nWhy the reference answer is correct: {explanation}\nStudent's answer: {user_answer}"
     );
 
-    let result = openrouter_json(system, prompt).await?;
+    let result = groq_json(system, prompt).await?;
 
     result["correct"]
         .as_bool()
@@ -282,6 +353,7 @@ pub fn run() {
             storage::get_listening,
             storage::get_listening_audio,
             storage::update_listening_position,
+            transcribe_listening,
             storage::remove_listening,
             storage::save_topic,
             storage::get_topics,

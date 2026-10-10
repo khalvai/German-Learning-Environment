@@ -5,11 +5,24 @@ type ListeningPayload = Omit<Listening, "createdAt"> & { createdAt: string };
 type TopicPayload = Omit<Topic, "createdAt"> & { createdAt: string };
 type WritingPayload = Omit<Writing, "createdAt"> & { createdAt: string };
 
+/** Tauri commands reject with a plain string, so `instanceof Error` alone would hide the real message. */
+export function errorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error) return error;
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 export interface Reading {
   id: string;
   title: string;
   createdAt: Date;
   originalText: string;
+}
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
 }
 
 export interface Listening {
@@ -18,6 +31,7 @@ export interface Listening {
   createdAt: Date;
   fileName: string;
   positionSeconds: number;
+  transcript: TranscriptSegment[];
 }
 
 export interface Topic {
@@ -174,6 +188,9 @@ export function getListeningAudio(id: string) {
 }
 export function updateListeningPosition(id: string, positionSeconds: number) {
   return invoke("update_listening_position", { id, positionSeconds });
+}
+export function transcribeListening(id: string) {
+  return invoke<TranscriptSegment[]>("transcribe_listening", { id });
 }
 export function removeListening(id: string) {
   return invoke("remove_listening", { id });

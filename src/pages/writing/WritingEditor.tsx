@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import BackLink from "../../components/BackLink";
 import { Save, Sparkles, Flag, Timer, BookOpen } from "lucide-react";
 import {
   saveWriting,
@@ -230,6 +231,7 @@ function TopBar({
           {error}
         </p>
       )}
+      <BackLink to="/writings" label="Back to writings" />
       <input
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}

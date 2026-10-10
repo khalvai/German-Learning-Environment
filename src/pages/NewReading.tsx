@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import BackLink from "../components/BackLink";
 import { useNavigate } from "react-router-dom";
 import { saveReading } from "../desktop";
 import Button from "../components/Button";
@@ -36,7 +37,8 @@ export default function NewReading() {
 
   return (
     <div className="min-h-screen">
-      <nav className="h-16 px-6 flex items-center justify-between border-b border-app-border">
+      <nav className="h-16 px-6 flex items-center gap-3 border-b border-app-border">
+        <BackLink to="/reading" label="Back to readings" />
         <h1 className="text-2xl font-bold">New Reading</h1>
       </nav>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { Pause, Play, RotateCcw, RotateCw } from "lucide-react";
 
 const MIME_BY_EXTENSION: Record<string, string> = {
@@ -84,17 +84,27 @@ const TICK_INTERVALS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600]
 
 type Hover = { x: number; time: number };
 
+export interface WaveformPlayerHandle {
+  /** Jumps to `seconds`; pass `play` to start playback from there. */
+  seekTo: (seconds: number, play?: boolean) => void;
+}
+
 export default function WaveformPlayer({
   audioBase64,
   fileName,
   initialPosition = 0,
   onPositionCommit,
+  onTimeChange,
+  handleRef,
   height = 160,
 }: {
   audioBase64: string;
   fileName: string;
   initialPosition?: number;
   onPositionCommit?: (positionSeconds: number) => void;
+  /** Fires on every playback time update, for syncing a transcript. */
+  onTimeChange?: (seconds: number) => void;
+  handleRef?: Ref<WaveformPlayerHandle>;
   /** Waveform height in CSS pixels (full peak-to-trough span). */
   height?: number;
 }) {
@@ -247,6 +257,25 @@ export default function WaveformPlayer({
     },
     [duration, persist],
   );
+
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      seekTo: (seconds, play = false) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = Math.max(0, seconds);
+        setCurrentTime(audio.currentTime);
+        persist(audio.currentTime);
+        if (play) audio.play().catch(() => setError("Playback failed."));
+      },
+    }),
+    [persist],
+  );
+
+  useEffect(() => {
+    onTimeChange?.(currentTime);
+  }, [currentTime, onTimeChange]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;

@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
+import BackLink from "./BackLink";
 
 type ContentLibraryProps = {
   title: string;
+  backTo?: string;
   itemLabel: string;
   loading?: boolean;
   error?: string | null;
@@ -15,6 +17,7 @@ type ContentLibraryProps = {
 /** Shared collection layout for saved learning material. */
 export default function ContentLibrary({
   title,
+  backTo = "/",
   itemLabel,
   loading = false,
   error,
@@ -25,7 +28,8 @@ export default function ContentLibrary({
 }: ContentLibraryProps) {
   return (
     <main className="min-h-screen">
-      <header className="flex h-16 items-center border-b border-app-border px-6">
+      <header className="flex h-16 items-center gap-3 border-b border-app-border px-6">
+        <BackLink to={backTo} label="Back" />
         <h1 className="text-2xl font-bold">{title}</h1>
       </header>
 

@@ -44,6 +44,13 @@ pub struct Writing {
 /// A saved audio clip for the Listening section. The audio bytes live in a
 /// sibling file (`audioFile`) next to this markdown record; `positionSeconds`
 /// is the last playback offset so a clip can be resumed where it was left off.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct TranscriptSegment {
+    pub start: f64,
+    pub end: f64,
+    pub text: String,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Listening {
@@ -52,6 +59,7 @@ pub struct Listening {
     created_at: String,
     file_name: String,
     position_seconds: f64,
+    transcript: Vec<TranscriptSegment>,
 }
 
 fn directory(app: &AppHandle, name: &str) -> Result<PathBuf, String> {
@@ -100,7 +108,18 @@ fn parse_listening(markdown: &str) -> Listening {
         created_at: frontmatter_value(markdown, "createdAt"),
         file_name: frontmatter_value(markdown, "fileName"),
         position_seconds: frontmatter_value(markdown, "positionSeconds").parse().unwrap_or(0.0),
+        transcript: parse_transcript(&section(markdown, "Transcript")),
     }
+}
+
+/// Transcript lines are stored as `[start-end] text`, one segment per line.
+fn parse_transcript(body: &str) -> Vec<TranscriptSegment> {
+    body.lines().filter_map(|line| {
+        let rest = line.trim().strip_prefix('[')?;
+        let (times, text) = rest.split_once(']')?;
+        let (start, end) = times.split_once('-')?;
+        Some(TranscriptSegment { start: start.parse().ok()?, end: end.parse().ok()?, text: text.trim().to_string() })
+    }).collect()
 }
 
 fn parse_writing(markdown: String) -> Writing {
@@ -155,7 +174,7 @@ pub fn remove_reading(app: AppHandle, id: String) -> Result<(), String> {
 /// Serializes one listening record. Kept in one place so `save_listening` and
 /// `update_listening_position` write byte-for-byte the same frontmatter shape.
 fn listening_markdown(listening: &Listening, audio_file: &str) -> String {
-    format!(
+    let mut markdown = format!(
         "---\nid: {}\ntitle: {}\ncreatedAt: {}\nfileName: {}\naudioFile: {}\npositionSeconds: {}\n---\n",
         listening.id,
         listening.title,
@@ -163,7 +182,15 @@ fn listening_markdown(listening: &Listening, audio_file: &str) -> String {
         listening.file_name,
         audio_file,
         listening.position_seconds,
-    )
+    );
+    if !listening.transcript.is_empty() {
+        markdown.push_str("\n## Transcript\n\n");
+        for segment in &listening.transcript {
+            let text = segment.text.split_whitespace().collect::<Vec<_>>().join(" ");
+            markdown.push_str(&format!("[{:.2}-{:.2}] {}\n", segment.start, segment.end, text));
+        }
+    }
+    markdown
 }
 
 #[tauri::command]
@@ -185,7 +212,7 @@ pub fn save_listening(app: AppHandle, title: String, file_name: String, audio_ba
     let directory = directory(&app, "listenings")?;
     let audio_file = format!("{id}.{extension}");
     fs::write(directory.join(&audio_file), bytes).map_err(|error| error.to_string())?;
-    let listening = Listening { id: id.clone(), title, created_at: Utc::now().to_rfc3339(), file_name, position_seconds: 0.0 };
+    let listening = Listening { id: id.clone(), title, created_at: Utc::now().to_rfc3339(), file_name, position_seconds: 0.0, transcript: Vec::new() };
     fs::write(directory.join(format!("{id}.md")), listening_markdown(&listening, &audio_file)).map_err(|error| error.to_string())?;
     Ok(id)
 }
@@ -557,4 +584,25 @@ pub fn get_recent_mistakes(app: AppHandle) -> Result<Vec<RecentMistake>, String>
     }
 
     Ok(results)
+}
+
+/// Path and lowercase extension of a clip's audio file, for transcription.
+pub fn listening_audio_file(app: &AppHandle, id: &str) -> Result<(PathBuf, String), String> {
+    if !valid_id(id) { return Err("Invalid listening id.".into()); }
+    let directory = directory(app, "listenings")?;
+    let markdown = fs::read_to_string(directory.join(format!("{id}.md"))).map_err(|error| error.to_string())?;
+    let audio_file = frontmatter_value(&markdown, "audioFile");
+    if audio_file.is_empty() { return Err("Audio file is missing for this clip.".into()); }
+    let extension = std::path::Path::new(&audio_file).extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    Ok((directory.join(audio_file), extension))
+}
+
+pub fn save_listening_transcript(app: &AppHandle, id: &str, transcript: Vec<TranscriptSegment>) -> Result<(), String> {
+    if !valid_id(id) { return Err("Invalid listening id.".into()); }
+    let path = directory(app, "listenings")?.join(format!("{id}.md"));
+    let markdown = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    let audio_file = frontmatter_value(&markdown, "audioFile");
+    let mut listening = parse_listening(&markdown);
+    listening.transcript = transcript;
+    fs::write(&path, listening_markdown(&listening, &audio_file)).map_err(|error| error.to_string())
 }

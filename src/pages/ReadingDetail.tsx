@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import BackLink from "../components/BackLink";
 import GermanWordLookup from "../components/GermanWordLookup";
 import { useParams } from "react-router-dom";
 import { getReading, type Reading } from "../desktop";
@@ -143,6 +144,7 @@ function TopBar({
 }) {
   return (
     <header className="flex items-center gap-4 border-b border-app-border px-6 py-4">
+      <BackLink to="/reading" label="Back to readings" />
       <h1 className="flex-1 truncate text-center text-base font-medium text-slate-200">{title}</h1>
 
       <ModeTabs mode={mode} onModeChange={onModeChange} />

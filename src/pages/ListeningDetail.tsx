@@ -1,8 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { getListening, getListeningAudio, updateListeningPosition, type Listening } from "../desktop";
-import WaveformPlayer from "../components/WaveformPlayer";
+import {
+  errorMessage,
+  getListening,
+  getListeningAudio,
+  transcribeListening,
+  updateListeningPosition,
+  type Listening,
+  type TranscriptSegment,
+} from "../desktop";
+import WaveformPlayer, { type WaveformPlayerHandle } from "../components/WaveformPlayer";
+import Transcript from "../components/Transcript";
+import GermanWordLookup from "../components/GermanWordLookup";
 
 export default function ListeningDetail() {
   const { id } = useParams();
@@ -11,6 +21,25 @@ export default function ListeningDetail() {
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcriptError, setTranscriptError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [lookup, setLookup] = useState<{ word: string; sentence: string } | null>(null);
+  const playerRef = useRef<WaveformPlayerHandle>(null);
+
+  const handleTranscribe = useCallback(async () => {
+    if (!id) return;
+    setTranscribing(true);
+    setTranscriptError(null);
+    try {
+      setTranscript(await transcribeListening(id));
+    } catch (e) {
+      setTranscriptError(errorMessage(e, "Transcription failed."));
+    } finally {
+      setTranscribing(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -25,6 +54,7 @@ export default function ListeningDetail() {
           return;
         }
         setListening(record);
+        setTranscript(record.transcript);
         const audio = await getListeningAudio(id);
         if (!cancelled) setAudioBase64(audio);
       } catch {
@@ -61,6 +91,8 @@ export default function ListeningDetail() {
 
         {audioBase64 && listening ? (
           <WaveformPlayer
+            handleRef={playerRef}
+            onTimeChange={setCurrentTime}
             audioBase64={audioBase64}
             fileName={listening.fileName}
             initialPosition={listening.positionSeconds}
@@ -70,6 +102,29 @@ export default function ListeningDetail() {
           />
         ) : (
           !error && <p className="p-4 text-slate-400">Loading audio…</p>
+        )}
+
+        {listening && audioBase64 && (
+          <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+            <Transcript
+              segments={transcript}
+              currentTime={currentTime}
+              generating={transcribing}
+              error={transcriptError}
+              onGenerate={handleTranscribe}
+              onSeek={(seconds) => playerRef.current?.seekTo(seconds, true)}
+              onSelectWord={(word, sentence) => setLookup({ word, sentence })}
+            />
+            {lookup && (
+              <aside className="rounded-xl border border-app-border p-4">
+                <GermanWordLookup
+                  selectedWord={lookup.word}
+                  contextSentence={lookup.sentence}
+                  onClose={() => setLookup(null)}
+                />
+              </aside>
+            )}
+          </div>
         )}
       </div>
     </div>

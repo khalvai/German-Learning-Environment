@@ -159,9 +159,9 @@ function KeyGate({
 export function ApiKeyGate() {
   return (
     <KeyGate
-      title="Open router api key"
+      title="Groq API key"
       hint="Stored securely on this device."
-      placeholder="sk-or-v1-..."
+      placeholder="gsk_..."
       hasCommand="has_api_key"
       saveCommand="save_api_key"
       removeCommand="remove_api_key"

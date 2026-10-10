@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2, Sparkles, Volume2 } from "lucide-react";
-import { explainWord, type ExplanationResponse } from "../desktop";
+import { errorMessage, explainWord, type ExplanationResponse } from "../desktop";
 
 /**
  * GermanWordLookup
@@ -354,7 +354,7 @@ export default function GermanWordLookup({ selectedWord, contextSentence, onClos
     try {
       setResult(await fetchWiktionaryData(word));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(errorMessage(e, "Something went wrong."));
     }
   }, []);
 
@@ -364,7 +364,7 @@ export default function GermanWordLookup({ selectedWord, contextSentence, onClos
     try {
       setExplanation(await explainWord(word, sentence));
     } catch (e) {
-      setAiError(e instanceof Error ? e.message : "AI explanation failed.");
+      setAiError(errorMessage(e, "AI explanation failed."));
     } finally {
       setAiLoading(false);
     }
