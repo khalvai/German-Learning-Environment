@@ -2,7 +2,6 @@
 
 Something that I needed for learning German :)
 
-
 ### ✍️ Writing
 
 I needed a writing environment(apart from Google Docs, why not? having my own dictation mode)
