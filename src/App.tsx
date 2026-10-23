@@ -21,6 +21,7 @@ import MistakeReview from "./pages/writing/mistakes/MistakeReview";
 
 function BackspaceBack() {
   const navigate = useNavigate();
+
   const location = useLocation();
 
   useEffect(() => {
